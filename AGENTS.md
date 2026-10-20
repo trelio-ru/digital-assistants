@@ -25,3 +25,16 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 - Никаких product tags, marketplace publication, установки/включения или изменения
   локального Codex без отдельной применимой команды пользователя. Draft/CI packages
   остаются unsigned/неактивными. Синтетические tests не доказывают Windows pilot.
+
+## Пакет и проверки
+
+Portable manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
+Список payload ограничен builder; новый файл требует осознанного включения.
+`scripts/build-plugin.mjs` читает только regular source и exact Git blobs общего
+shell по lock, никогда dirty checkout или сеть. Shell modes/bytes сохраняются;
+output – новая папка, существующая не перезаписывается. Integrity inventory не
+является подписью или готовностью backend. Запуск только через явный signed
+`bridge assistant` profile; human `mcp` fallback запрещён.
+Перед интеграцией: `npm run check:dependencies`, `npm test`, validation обеих skills
+и две byte-identical сборки с pinned настоящим shell. До готовности assistant
+entry/backend не устанавливать и не объявлять unattended flow работающим.

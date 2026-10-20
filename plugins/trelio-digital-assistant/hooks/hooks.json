@@ -1,0 +1,32 @@
+{
+  "description": "Привязывает вызовы assistant MCP к наблюдаемому сеансу и активному поручению.",
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/launch-trelio-node\" \"${CLAUDE_PLUGIN_ROOT}/scripts/trelio-host-runtime-loader.mjs\" bridge assistant hook",
+        "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"& (Join-Path $env:CLAUDE_PLUGIN_ROOT 'scripts\\launch-trelio-node.cmd') (Join-Path $env:CLAUDE_PLUGIN_ROOT 'scripts\\trelio-host-runtime-loader.mjs') bridge assistant hook; exit $LASTEXITCODE\"",
+        "timeout": 10
+      }]
+    }],
+    "PreToolUse": [{
+      "matcher": "^(mcp__)?trelio[-_]assistant__[a-z0-9_]+$|^mcp__plugin_trelio-digital-assistant_trelio-assistant__[a-z0-9_]+$|^(mcp[:./-])?trelio-assistant[:./-][a-z0-9_]+$",
+      "hooks": [{
+        "type": "command",
+        "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/launch-trelio-node\" \"${CLAUDE_PLUGIN_ROOT}/scripts/trelio-host-runtime-loader.mjs\" bridge assistant hook",
+        "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"& (Join-Path $env:CLAUDE_PLUGIN_ROOT 'scripts\\launch-trelio-node.cmd') (Join-Path $env:CLAUDE_PLUGIN_ROOT 'scripts\\trelio-host-runtime-loader.mjs') bridge assistant hook; exit $LASTEXITCODE\"",
+        "timeout": 30
+      }]
+    }],
+    "SessionEnd": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/launch-trelio-node\" \"${CLAUDE_PLUGIN_ROOT}/scripts/trelio-host-runtime-loader.mjs\" bridge assistant hook",
+        "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"& (Join-Path $env:CLAUDE_PLUGIN_ROOT 'scripts\\launch-trelio-node.cmd') (Join-Path $env:CLAUDE_PLUGIN_ROOT 'scripts\\trelio-host-runtime-loader.mjs') bridge assistant hook; exit $LASTEXITCODE\"",
+        "timeout": 3
+      }]
+    }]
+  }
+}

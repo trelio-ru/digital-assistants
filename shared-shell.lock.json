@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/trelio-ru/agent-workspaces.git",
+  "revision": "a1d3400b3b27bb74d5e447755af0817ae3838f6c",
+  "directory": "plugins/trelio-agent-workspaces/scripts",
+  "componentVersion": "3.2.3"
+}
