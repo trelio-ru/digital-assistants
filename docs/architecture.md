@@ -25,6 +25,8 @@ authority layer. Содержимое не попадает в SQLite или glo
 Подробный формат и порядок продолжения входят в task-worker reference в пакете.
 Плагин описывает contract будущих pass/outcome методов; отсутствие этих методов
 остаётся явным blocker, а не разрешением самостоятельно имитировать dispatcher.
+Без смыслового изменения state не создаёт timestamp-only Workspace Run: повторная
+проверка и фактический следующий wake фиксируются структурным runtime protocol.
 
 ## Формат и shared shell
 
