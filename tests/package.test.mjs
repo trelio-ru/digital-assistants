@@ -21,6 +21,7 @@ async function fixture(t) {
   await fs.mkdir(path.join(repository, prefix), { recursive: true });
   const git = (...args) => execFileSync('git', ['-C', repository, ...args], { encoding: 'utf8' }).trim();
   git('init', '-q');
+  git('config', 'core.autocrlf', 'false');
   for (const name of SHELL_FILES) {
     const contents = name === 'trelio-host-runtime-shell.mjs'
       ? 'export const PLUGIN_VERSION = "3.2.3";\n'
@@ -141,7 +142,7 @@ test('skill discovery stays concise and setup/task instruction budget is bounded
     for (const name of ['assistant-setup', 'assistant-task-worker']) {
       const source = await fs.readFile(path.join(SOURCE, 'skills', name, 'SKILL.md'), 'utf8');
       const metadata = source.split('---')[1];
-      assert.ok(metadata.includes(`name: ${name}\n`));
+      assert.ok(metadata.split(/\r?\n/).includes(`name: ${name}`));
       total += encoder.encode(source).length;
     }
     assert.ok(total < 2100, `Bundled instruction tokens: ${total}`);
