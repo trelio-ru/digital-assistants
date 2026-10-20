@@ -30,6 +30,10 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 
 Portable manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
 Список payload ограничен builder; новый файл требует осознанного включения.
+Task worker читает packaged work-state reference для долгих задач и нескольких
+ассистентов. WORK.md остаётся обычным Workspace data с UUID identity, не AGENTS
+или authority. Waiting goal не закрывается по native completed turn; файл не
+заменяет подтверждённый server pass/outcome или фактическое расписание.
 `scripts/build-plugin.mjs` читает только regular source и exact Git blobs общего
 shell по lock, никогда dirty checkout или сеть. Shell modes/bytes сохраняются;
 output – новая папка, существующая не перезаписывается. Integrity inventory не

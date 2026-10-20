@@ -9,6 +9,23 @@ storage, hooks/admission, очередью, scheduler, native Codex и OS-servic
 Этот репозиторий содержит устанавливаемую композицию и короткие инструкции.
 Исправления обычных ACL, Workspace, Secret engine и runtime сохраняются общими.
 
+## Долгие задачи
+
+Каждый task worker ведёт в canonical task Workspace один текущий
+`assistants/<assistantUserId>/WORK.md`. UUID берётся из live pass identity;
+переименование, новая машина или другой company display name не меняют путь.
+Это обычные task data с прежним Workspace ACL/encryption/Run/CAS, не новый
+authority layer. Содержимое не попадает в SQLite или global owner profile.
+
+Файл сохраняет цель человека и источник, критерии результата, прогресс,
+ожидаемые ответы/вопросы, неопределённые действия, следующий шаг и read-back
+расписания. Ожидание ответа завершает проход, но не цель: runtime продолжает
+циклы и может раньше разбудить тот же чат по разрешённому событию.
+Завершение части одного ассистента не закрывает задачу или работу другого.
+Подробный формат и порядок продолжения входят в task-worker reference в пакете.
+Плагин описывает contract будущих pass/outcome методов; отсутствие этих методов
+остаётся явным blocker, а не разрешением самостоятельно имитировать dispatcher.
+
 ## Формат и shared shell
 
 Используется portable `plugin.json` + `mcp.json` и OpenAI extension по

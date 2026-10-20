@@ -14,6 +14,7 @@ export const SHELL_FILES = Object.freeze([
 const SOURCE_FILES = Object.freeze([
   'plugin.json', 'mcp.json', 'hooks/hooks.json',
   'skills/assistant-setup/SKILL.md', 'skills/assistant-task-worker/SKILL.md',
+  'skills/assistant-task-worker/references/work-state.md',
 ]);
 const MAX_FILE_BYTES = 1024 * 1024;
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
