@@ -23,8 +23,10 @@ authority layer. Содержимое не попадает в SQLite или glo
 циклы и может раньше разбудить тот же чат по разрешённому событию.
 Завершение части одного ассистента не закрывает задачу или работу другого.
 Подробный формат и порядок продолжения входят в task-worker reference в пакете.
-Плагин описывает contract будущих pass/outcome методов; отсутствие этих методов
-остаётся явным blocker, а не разрешением самостоятельно имитировать dispatcher.
+Task worker использует live dedicated catalog и returned typed Workspace actions.
+Fresh Run имеет сохраняемый UUID intent, exact recovery – прежний runId; accepted
+read не создаёт writable Run. Отсутствие нужного read/write/pass/owner capability
+остаётся явным blocker, а не разрешением имитировать dispatcher или human MCP.
 Без смыслового изменения state не создаёт timestamp-only Workspace Run: повторная
 проверка и фактический следующий wake фиксируются структурным runtime protocol.
 

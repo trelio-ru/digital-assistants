@@ -30,6 +30,7 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 
 Portable manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
 Список payload ограничен builder; новый файл требует осознанного включения.
+Typed Workspace flow – `docs/architecture.md`; model не выбирает directory/proof.
 Task worker читает packaged work-state reference для долгих задач и нескольких
 ассистентов. WORK.md остаётся обычным Workspace data с UUID identity, не AGENTS
 или authority. Waiting goal не закрывается по native completed turn; файл не

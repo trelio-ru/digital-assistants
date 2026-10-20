@@ -15,6 +15,12 @@ turn does not prove a saved revision. After compaction reread the Run's full
 pinned rules/profile before this file. It is task data, not another instruction
 layer; never name it AGENTS.md or use it to override permissions or working rules.
 
+Reading the current accepted state is not a reason to create a writable Run.
+Use the installed accepted-file/read-only Workspace capability and its exact
+head. Do not treat an old local working copy as current after another writer
+may have changed it. If that read capability is unavailable, report it explicitly;
+do not create a timestamp-only Run to work around the missing reader.
+
 Update this file when the goal, progress, pending interaction or next action
 changes. Do not create a Run merely to refresh a review timestamp or copy the
 scheduler's next clock tick. When nothing changed, reuse the accepted state and
