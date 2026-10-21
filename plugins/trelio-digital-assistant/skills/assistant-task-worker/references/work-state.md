@@ -85,6 +85,28 @@ cycles and state files remain separate; never mark the whole task done solely
 because this assistant finished its part. Revoked/paused access stops execution
 immediately even when no final file update is possible.
 
+## Correcting an established own error
+
+Use the dedicated live `repair_assistant_workspace_result` capability when an
+accepted own Run contains an established error. First `retract` that exact Run
+under the current pass/head to retire its evidence. This does not change files
+or finish the repair. Do not classify a changed preference as an own error.
+
+If its candidate is still current, use `restore` for only that retired Run's
+exact base. If later work exists, open a normal `no_status_change` Run from the
+current head and reverse only the erroneous own delta, preserving later edits
+and other assistants' state. Preserve useful dirty local work through ordinary
+bridge recovery. A semantic conflict or missing capability is a concrete blocker;
+do not reset local history or use human OAuth to get around it.
+
+Read and verify the resulting accepted files. Then `retract` the original Run
+again with its verified accepted `correctionRunId` and exact current head. The
+erroneous source and its correction cannot be reused as business completion,
+including through a later `noChange` check. Continue the actual human goal with
+valid material or a saved blocker; repair alone does not close the goal or stop
+its cycle. On an uncertain restore, establish the original native result before
+any further action; never issue another restore just to clear uncertainty.
+
 Keep shared stable task knowledge in canonical shared context and reference it
 from this file. Do not duplicate message bodies or unchanged source documents.
 Another assistant's state is readable only with normal Workspace ACL and does

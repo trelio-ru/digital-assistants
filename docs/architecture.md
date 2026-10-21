@@ -29,6 +29,10 @@ read не создаёт writable Run. Отсутствие нужного read/
 остаётся явным blocker, а не разрешением имитировать dispatcher или human MCP.
 Без смыслового изменения state не создаёт timestamp-only Workspace Run: повторная
 проверка и фактический следующий wake фиксируются структурным runtime protocol.
+Task-worker reference также описывает own-error flow: retire accepted evidence,
+safe native restore либо selective reversal с сохранением поздних правок,
+проверка accepted файлов и запись correction. Ошибка и её исправление не
+закрывают человеческую цель; live dedicated capability и общий ACL обязательны.
 
 ## Формат и shared shell
 
