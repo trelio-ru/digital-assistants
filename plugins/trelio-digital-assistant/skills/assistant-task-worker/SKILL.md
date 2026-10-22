@@ -51,6 +51,10 @@ unchanged context into extra files. Company accounts belong to company Secret
 storage even when the assistant created them; personal assistant accounts use
 the assistant's private Secret scope. Ask the owner when ownership is unclear.
 Secret values never belong in chat, logs, queue payloads or task files.
+For personal Secret creation/use, follow the conditional
+[private-credential flow](references/work-state.md#private-credentials) and only
+the live declared capabilities. An empty-card approval never permits generation
+or registration of an external account.
 
 At each pass, review task deadlines, active controls, checklist, open questions
 and the business result under the same domain rules as ordinary users. Assess

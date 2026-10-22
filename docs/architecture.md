@@ -48,6 +48,13 @@ Builder читает exact Git blobs, а не потенциально dirty che
 Версия shell 3.2.3 обозначает совместимость общей проверки подписи и не является
 версией нового плагина. Runtime packages, токены и локальные caches не включаются.
 
+Private-credential flow находится в существующем task-worker reference.
+Он маршрутизирует live native owner intent, empty-card либо NEW password
+generation и protected browser use. Указания не реализуют генератор, vault,
+provider или второй executable: всё выполняет общий signed host и Secret engine.
+Нет human approval flags/OAuth, импорта corporate values или разрешения signup
+по созданию карточки. Отсутствующая capability остаётся конкретным blocker.
+
 MCP и hooks запускают общий loader с `bridge assistant mcp|hook`. Явный `assistant`
 profile должен поддерживаться signed runtime. Старый runtime обязан отвергать
 неизвестную команду, без перехода к human MCP. Hooks требуют самостоятельного

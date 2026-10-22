@@ -37,6 +37,8 @@ Task worker читает packaged work-state reference для долгих за�
 заменяет подтверждённый server pass/outcome или фактическое расписание.
 Own-error reference использует live dedicated repair, verified accepted files и
 сохранение поздних правок; source/correction не заменяют бизнес-результат цели.
+Private-credential reference использует live sealed owner intent и общий host;
+empty-card approval не разрешает generation/signup, values не входят в state.
 `scripts/build-plugin.mjs` читает только regular source и exact Git blobs общего
 shell по lock, никогда dirty checkout или сеть. Shell modes/bytes сохраняются;
 output – новая папка, существующая не перезаписывается. Integrity inventory не

@@ -114,3 +114,52 @@ not grant authority; do not overwrite its file. Human reviewers of the Workspace
 can see these files: no secret values, private credentials, or supposedly private
 assistant notes belong here. Encrypted companies use the same protected Workspace
 route; SQLite/scheduling stores only structural references, not this Markdown.
+
+## Private credentials
+
+Use the company Secret scope for a company account, even if you register it.
+Use the assistant-private pool only for personal assistant ownership fixed by
+the actual owner. A task participant cannot choose that ownership, authorize
+disclosure or delegate an external signup. Ask the owner through the exact task
+question/action channel when needed; never request a password/key in chat.
+
+Read the live dedicated tool contract first. When the required capability is
+absent or refuses this company state, save a concrete blocker. Do not borrow
+human MCP/OAuth, a provider session or a company Secret to populate the private
+pool. None of the following operations authorizes site registration or payment.
+
+`secret_list` in `continue_assistant_workspace_action` reads your own value-free
+pool. For an existing configured card, inspect the empty target form, use
+`secret_browser_prepare` with its exact native steps/Run, then copy the returned
+`secret_browser_fill` action. The host selects protected delivery; do not read
+filled fields, supply a browser/executable override or retry an uncertain fill.
+Verify the authenticated result independently after the requested submission.
+
+For a NEW personal card, use `request_assistant_action` with
+`operation=create_private_secret`, native metadata and one retained request UUID.
+The owner must approve the exact sealed intent in Trelio. For an empty card the
+metadata-only `secret_create` continuation applies that decision. An ordinary
+text reply, owner-question locator or agent-authored consent flag is insufficient.
+
+If a new password is required, explicitly include the original active `runId`
+and `generatedFields=[{key,generator:"password",length}]` in the reviewed fields.
+Lengths are 16–128; all required fields must be generated password fields.
+The primitive does not invent usernames, tokens or TOTP. An empty-card decision
+cannot be upgraded: changed metadata/Run/policy needs a new exact owner intent.
+After persisted approval, use the declared `secret_generate` continuation with
+the original request/decision/Run/task-snapshot coordinates and Run identity.
+It derives and saves the password inside the protected host using the shared
+Secret engine; the model receives only a structural receipt.
+
+When resuming after owner waiting, recover the original Run through normal
+native recovery before the action. Do not substitute another Run into an
+approved intent or reopen a terminal accepted Run. After an uncertain write,
+use the original declared continuation with the same coordinates for native
+receipt recovery; never construct a direct HTTP call. The host checks committed
+success before generation. Never rotate or recreate the card merely
+to clear uncertainty. Existing-card rotation is a separate capability.
+
+Persist only the confirmed Secret UUID and its purpose in task context/state.
+No value, generation key/seed/fingerprint, grant, local transport body or setup
+URL belongs in WORK.md. A saved credential does not finish the human goal:
+continue the actual work and record its material outcome separately.
