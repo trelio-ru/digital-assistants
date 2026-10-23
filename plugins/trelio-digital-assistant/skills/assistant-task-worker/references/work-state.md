@@ -105,6 +105,14 @@ receipt. Never derive the key from a display name, invent a hash or silently mov
 another task's conversation. An unknown send requires result reconciliation
 before either sending again or claiming a route.
 
+For an incoming batch explicitly marked `intakeKind:"route_existing"` in the
+live native work context, bind its exact selected source/key to this existing
+task once the permanent task chat/pass is confirmed, before material completion.
+Retain the route receipt so later replies do not need repeated classification.
+That presentation hint grants no body-read, processing or ACK permission.
+`owner_command` intake and a shared chat carrying new assignments must NOT be
+bound wholesale to one of the created tasks; its commands retain per-event routes.
+
 A route permits event delivery; it does not prove body read, processing, sender
 identity or read-state acknowledgement. If the installed provider/runtime cannot
 supply the exact source/key or native binding is unavailable, record that

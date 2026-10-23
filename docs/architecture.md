@@ -62,6 +62,9 @@ back the route receipt. Missing binding remains a concrete blocker with a cycle,
 not a claim that event wake or message ACK is configured.
 Explicit first-send conversation references use that SAME provider/account scope;
 an unavailable hint never causes a second send or grants task routing authority.
+Inbound existing-task triage binds only its explicitly marked exact selected
+conversation after a genuine permanent task pass. Owner-command shared intake
+keeps per-event routes and is never captured by one newly created task.
 Нет human approval flags/OAuth, импорта corporate values или разрешения signup
 по созданию карточки. Отсутствующая capability остаётся конкретным blocker.
 
