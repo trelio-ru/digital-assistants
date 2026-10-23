@@ -85,6 +85,15 @@ cycles and state files remain separate; never mark the whole task done solely
 because this assistant finished its part. Revoked/paused access stops execution
 immediately even when no final file update is possible.
 
+## Cancelling an abandoned own Run
+
+Use the live dedicated `cancel_agent_workspace_run` for an abandoned own
+unaccepted Run, with its exact ID and original reason. In an encrypted company
+the shared host protects that reason; do not supply markers or call the human
+route. A lost result requires exact native read-back before another action.
+Cancellation retains files, accepted history, goal and cycle; resume useful
+work through ordinary recovery rather than deleting a local directory.
+
 ## Correcting an established own error
 
 Use the dedicated live `repair_assistant_workspace_result` capability when an
@@ -148,6 +157,14 @@ The owner must approve the exact sealed intent in Trelio. For an empty card the
 metadata-only `secret_create` continuation applies that decision. An ordinary
 text reply, owner-question locator or agent-authored consent flag is insufficient.
 
+In an encrypted task, use the native neutral metadata variant:
+`metadataMode:"neutral"` and `cardType:"opaque"|"login"|"password"`. The server
+fixes the personal card's name and field labels; keep the task's purpose in the
+encrypted owner question and Workspace. Do not copy company names, URLs,
+descriptions or markers into global personal metadata. This pool uses the
+personal server-keyring storage shown in the owner's exact action review;
+creating a neutral card does not export or adopt company credentials.
+
 If a new password is required, explicitly include the original active `runId`
 and `generatedFields=[{key,generator:"password",length}]` in the reviewed fields.
 Lengths are 16–128; all required fields must be generated password fields.
@@ -157,6 +174,13 @@ After persisted approval, use the declared `secret_generate` continuation with
 the original request/decision/Run/task-snapshot coordinates and Run identity.
 It derives and saves the password inside the protected host using the shared
 Secret engine; the model receives only a structural receipt.
+
+For that encrypted neutral password variant, use `cardType:"password"` and
+exactly `generatedFields:[{key:"password",generator:"password",length}]` with
+the original active Run. Use the returned live continuation, not a reconstructed
+plan. For signed skill authentication, use the exact native `commandId` template
+from current `get_agent_skill`; the common host delivers the field only to that
+reviewed authentication command and returns no provider output or value.
 
 When resuming after owner waiting, recover the original Run through normal
 native recovery before the action. Do not substitute another Run into an

@@ -51,7 +51,8 @@ Builder читает exact Git blobs, а не потенциально dirty che
 
 Private-credential flow находится в существующем task-worker reference.
 Он маршрутизирует live native owner intent, empty-card либо NEW password
-generation и protected browser use. Указания не реализуют генератор, vault,
+generation, encrypted neutral metadata и protected browser/signed-skill use.
+Указания не реализуют генератор, vault,
 provider или второй executable: всё выполняет общий signed host и Secret engine.
 Нет human approval flags/OAuth, импорта corporate values или разрешения signup
 по созданию карточки. Отсутствующая capability остаётся конкретным blocker.

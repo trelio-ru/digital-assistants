@@ -39,7 +39,8 @@ Own-error reference использует live dedicated repair, verified accepte
 сохранение поздних правок; encrypted repair идёт через обычный correction Run,
 source/correction не заменяют бизнес-результат цели.
 Private-credential reference использует live sealed owner intent и общий host;
-empty-card approval не разрешает generation/signup, values не входят в state.
+encrypted neutral metadata не экспортирует company content; empty-card approval
+не разрешает generation/signup, values не входят в state.
 `scripts/build-plugin.mjs` читает только regular source и exact Git blobs общего
 shell по lock, никогда dirty checkout или сеть. Shell modes/bytes сохраняются;
 output – новая папка, существующая не перезаписывается. Integrity inventory не
