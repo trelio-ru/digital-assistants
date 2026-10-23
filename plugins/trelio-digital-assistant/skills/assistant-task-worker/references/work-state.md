@@ -249,6 +249,17 @@ bytes. Read the original receipt and preserve uncertainty in task state. A
 company scope selected by the owner cannot bypass the ordinary Secret creator
 or audience permissions. Signup and account success remain separate.
 
+## Registering an external account
+
+For a NEW external account, request `create_external_account` with exact
+`siteOrigin`, `purpose`, `intendedHolder` and full `signupPlan`. After its
+persisted approval, use `external_account_admit` with that same original
+plan/request/task snapshot. Only the first `mayExecute:true` admits one attempt
+through an already permitted browser/provider; a replay or unknown result never
+does. Secret create/use and signup are independent approvals. No payment, access,
+human-login, service-term or publication control is bypassed. Verify fresh
+site/provider state and save accepted evidence before reporting account creation.
+
 ## Local account login
 
 Read current skill instructions, execution and connection guidance. If the
