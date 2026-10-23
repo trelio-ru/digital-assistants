@@ -85,6 +85,32 @@ cycles and state files remain separate; never mark the whole task done solely
 because this assistant finished its part. Revoked/paused access stops execution
 immediately even when no final file update is possible.
 
+## Waiting for an external reply
+
+Before sending, load the exact company skill and its published sending policy.
+Record the recipient, task purpose and original send intent. After a confirmed
+send, retain its exact provider conversation reference and native selected
+source. Bind that conversation to this task through the live
+`bind_assistant_source_conversation` contract using the provider's opaque
+conversation key, current source revision and task snapshot. Read back its route
+receipt. Never derive the key from a display name, invent a hash or silently move
+another task's conversation. An unknown send requires result reconciliation
+before either sending again or claiming a route.
+
+A route permits event delivery; it does not prove body read, processing, sender
+identity or read-state acknowledgement. If the installed provider/runtime cannot
+supply the exact source/key or native binding is unavailable, record that
+specific blocker and keep a justified recurring check. Do not claim event wake
+is configured merely because the message was sent. Unknown conversations remain
+unrouted until a permitted exact binding or verified owner intake resolves them;
+never disclose their bodies to a guessed company/task.
+
+On wake, read the exact delivered body/revision through the signed skill, save
+the relevant result in accepted material and select only the original slots
+actually processed. The common runtime performs provider ACK from the committed
+receipt; do not mark an entire chat read or acknowledge unreviewed messages to
+clear a queue. Reading elsewhere does not replace the runtime's durable cursor.
+
 ## Cancelling an abandoned own Run
 
 Use the live dedicated `cancel_agent_workspace_run` for an abandoned own
@@ -194,6 +220,48 @@ Persist only the confirmed Secret UUID and its purpose in task context/state.
 No value, generation key/seed/fingerprint, grant, local transport body or setup
 URL belongs in WORK.md. A saved credential does not finish the human goal:
 continue the actual work and record its material outcome separately.
+
+## Corporate credentials
+
+For an existing company credential, select `secret_list` with `holder:"company"`.
+The ordinary Secret ACL and exact active task/parent scopes still apply; ownership
+of the assistant grants no additional company rights. Use the same protected
+browser or signed authentication flow while retaining the corporate holder.
+
+For a NEW task-scoped corporate card, use the live `create_company_secret`
+owner action with neutral metadata, the original active Run and the exact
+`empty|generated|protected_input` source. Follow its returned
+`secret_company_create` continuation. Each variant is a separate immutable plan:
+empty approval cannot become password generation or human capture. Protected
+input belongs only in the common local form; the model does not read or collect
+it. A pending/unknown native attempt never authorizes another form or replacement
+bytes. Read the original receipt and preserve uncertainty in task state. A
+company scope selected by the owner cannot bypass the ordinary Secret creator
+or audience permissions. Signup and account success remain separate.
+
+## Local account login
+
+Read current skill instructions, execution and connection guidance. If the
+runtime reports `runtimeConsent`, request its exact `accept_skill_runtime` owner
+action first. After the persisted approval, copy the declared `skill_consent`
+continuation and re-resolve the skill. This reviews code execution, not login.
+
+Select an available signed human-input command ID from `accountSetup` and one
+managed account UUID. Use `setup_skill_account` through the live setup view;
+the owner reviews the exact release/device/account, signed recipe and current
+connection configuration. Execute only the returned `skill_account_setup`
+continuation after its persisted approval. Do not author argv, recipe markers,
+device fields, session paths, Secret overrides or an approval flag. The shared
+host opens the protected existing-account handoff under the original deadline.
+A human completes login factors there. This does not permit site registration,
+human-session import, unbound account adoption or message sending.
+
+A repeated/uncertain admission is reconcile-only; never reopen the form or
+restart the provider to recover it. `loginVerified:false`, provider exit or a
+closed window means verification is still required. Use the skill's fresh
+permitted probe/doctor before claiming a usable account, then return to the task
+view with `get_assistant_status`. Do not create native Codex automations or
+replace the existing task chat while waiting for login.
 
 ## Remote MCP
 

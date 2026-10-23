@@ -54,6 +54,12 @@ Private-credential flow находится в существующем task-work
 generation, encrypted neutral metadata и protected browser/signed-skill use.
 Указания не реализуют генератор, vault,
 provider или второй executable: всё выполняет общий signed host и Secret engine.
+Corporate cards and signed local account login use those same engines with
+independent exact owner intents. A login handoff is not verified login; a consumed
+attempt receipt never reopens input. Before waiting on correspondence, the worker
+binds its exact provider conversation to the current native source/task and reads
+back the route receipt. Missing binding remains a concrete blocker with a cycle,
+not a claim that event wake or message ACK is configured.
 Нет human approval flags/OAuth, импорта corporate values или разрешения signup
 по созданию карточки. Отсутствующая capability остаётся конкретным blocker.
 

@@ -56,6 +56,13 @@ For personal Secret creation/use, follow the conditional
 the live declared capabilities. An empty-card approval never permits generation
 or registration of an external account.
 
+For external correspondence, follow the
+[conversation binding flow](references/work-state.md#waiting-for-an-external-reply)
+before relying on incoming replies to wake this chat. For local account login
+or corporate Secret creation, use the corresponding conditional sections of
+that reference; package consent, account login and Secret ownership are distinct
+owner decisions with their own native receipts.
+
 At each pass, review task deadlines, active controls, checklist, open questions
 and the business result under the same domain rules as ordinary users. Assess
 the recurring cadence using the current state: increase or reduce it with a
