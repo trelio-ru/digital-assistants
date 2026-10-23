@@ -216,6 +216,16 @@ receipt recovery; never construct a direct HTTP call. The host checks committed
 success before generation. Never rotate or recreate the card merely
 to clear uncertainty. Existing-card rotation is a separate capability.
 
+For a NEW personal credential supplied by a human, request the explicit neutral
+`valueSource:"protected_input"` variant with the original active Run and card
+type. After that exact approval, use the declared `secret_input` continuation.
+The SAME local form collects the value privately and the native one-shot attempt
+ledger guards storage. An older empty/generated decision grants no such capture.
+Cancel, timeout or pending/unknown input is not saved and never permits a second
+form under that intent. Keep company-owned credentials in the corporate holder;
+the surrounding encrypted task does not turn the personal pool into company
+storage or permit extracting a value from a browser/session/file.
+
 Persist only the confirmed Secret UUID and its purpose in task context/state.
 No value, generation key/seed/fingerprint, grant, local transport body or setup
 URL belongs in WORK.md. A saved credential does not finish the human goal:
