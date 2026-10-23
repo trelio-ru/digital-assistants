@@ -44,6 +44,7 @@ encrypted neutral metadata не экспортирует company content; empty-
 не разрешает generation/signup, values не входят в state.
 Task reference covers exact conversation binding, signed account login and
 corporate Secret creation through the SAME host/owner ledger, not new executors.
+First-send hints never permit send replay or replace a native route receipt.
 `scripts/build-plugin.mjs` читает только regular source и exact Git blobs общего
 shell по lock, никогда dirty checkout или сеть. Shell modes/bytes сохраняются;
 output – новая папка, существующая не перезаписывается. Integrity inventory не

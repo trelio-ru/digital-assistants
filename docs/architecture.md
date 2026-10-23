@@ -60,6 +60,8 @@ attempt receipt never reopens input. Before waiting on correspondence, the worke
 binds its exact provider conversation to the current native source/task and reads
 back the route receipt. Missing binding remains a concrete blocker with a cycle,
 not a claim that event wake or message ACK is configured.
+Explicit first-send conversation references use that SAME provider/account scope;
+an unavailable hint never causes a second send or grants task routing authority.
 Нет human approval flags/OAuth, импорта corporate values или разрешения signup
 по созданию карточки. Отсутствующая capability остаётся конкретным blocker.
 

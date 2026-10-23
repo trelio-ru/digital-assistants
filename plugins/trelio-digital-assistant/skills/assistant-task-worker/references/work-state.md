@@ -87,6 +87,14 @@ immediately even when no final file update is possible.
 
 ## Waiting for an external reply
 
+When the signed provider supports it, explicitly select
+`send --conversation-reference` on the original authorized send. The common
+host returns `assistantSourceConversation` with the provider's opaque key and
+current native source candidates. Use exactly one matching source/revision in
+the existing bind flow below; the hint itself is not a route receipt. An
+unavailable hint never permits repeating a positive send. SMTP-only email or
+replies without native thread headers may require a separate routing decision.
+
 Before sending, load the exact company skill and its published sending policy.
 Record the recipient, task purpose and original send intent. After a confirmed
 send, retain its exact provider conversation reference and native selected
