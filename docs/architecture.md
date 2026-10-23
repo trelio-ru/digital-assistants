@@ -79,3 +79,14 @@ assistant MCP/daemon. До активации нужны реализованн�
 server pass/task policy, реальный enrollment, source → очередь → тот же native chat
 → business receipt и фактическое следующее пробуждение. Сейчас product release,
 marketplace publication и изменение существующего Windows-пилота не выполняются.
+
+
+Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
+under the genuine pass and assistant/device namespace. A native exact skill read
+selects the bounded `remote_mcp` presentation; status returns the task view. The
+same session-fixed profile/notification seam also supports `skill_setup`; views
+never grant authority. External writes consume a sealed full-argument owner
+intent before one request; the receipt admits an attempt, not delivery or replay.
+Encrypted declarations/arguments stay in the native-selected common payload flow.
+PAT/OAuth enrollment needs a human in the existing protected local UI. These
+runtime/DB/crypto checks do not assert Windows pilot or business readiness.

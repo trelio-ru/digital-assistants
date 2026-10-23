@@ -38,6 +38,7 @@ Task worker читает packaged work-state reference для долгих за�
 Own-error reference использует live dedicated repair, verified accepted files и
 сохранение поздних правок; encrypted repair идёт через обычный correction Run,
 source/correction не заменяют бизнес-результат цели.
+Remote MCP reference uses SAME live native resolver/credential store/doctor/call, bounded presentation view and a one-use owner attempt receipt; human local setup remains explicit.
 Private-credential reference использует live sealed owner intent и общий host;
 encrypted neutral metadata не экспортирует company content; empty-card approval
 не разрешает generation/signup, values не входят в state.

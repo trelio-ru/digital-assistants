@@ -194,3 +194,25 @@ Persist only the confirmed Secret UUID and its purpose in task context/state.
 No value, generation key/seed/fingerprint, grant, local transport body or setup
 URL belongs in WORK.md. A saved credential does not finish the human goal:
 continue the actual work and record its material outcome separately.
+
+## Remote MCP
+
+Use only `remoteMcpExecution` from the live exact `get_agent_skill`. It selects
+the small native Remote MCP tools view; `get_assistant_status` returns the task
+view before saving files/continuing task actions. These views change discovery,
+never pass, owner, company scope or permission. Do not call hidden tools or swap
+profile headers. Load the exact doctor schema before a provider call.
+
+Connect uses the SAME protected local PAT/OAuth UI and managed credential store.
+A human completes entry and provider consent there. Never import a human session,
+enter credentials in chat/terminal, automate login/trust/restart or claim setup
+was completed from opening its form. Setup/connection failures retain their exact
+blocker and do not authorize another provider/transport.
+
+For a write, request the exact `call_remote_agent_skill_tool` owner action with
+FULL arguments. Keep the original clientRequestId/task snapshot and wait for its
+persisted decision; ordinary answers are not approval. The native receipt admits
+one attempt and does not prove provider delivery. Lost admission or unknown
+provider results require owner-action read-back and an allowed provider read for
+reconciliation, never repeating the mutation. Save that uncertainty in WORK.md;
+no credentials or full provider arguments belong in operational queue metadata.
