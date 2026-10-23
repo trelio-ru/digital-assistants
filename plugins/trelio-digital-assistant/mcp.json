@@ -5,7 +5,7 @@
       "type": "stdio",
       "command": "./scripts/launch-trelio-node",
       "args": ["./scripts/trelio-host-runtime-loader.mjs", "bridge", "assistant", "mcp"],
-      "cwd": "."
+      "cwd": "${PLUGIN_ROOT}"
     }
   }
 }

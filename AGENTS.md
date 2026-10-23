@@ -31,6 +31,11 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 Portable manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
 Список payload ограничен builder; новый файл требует осознанного включения.
 Typed Workspace flow – `docs/architecture.md`; model не выбирает directory/proof.
+Portable MCP cwd фиксирован как `${PLUGIN_ROOT}`: legacy inline `"."` native parser
+не принимает, хотя skills остаются видимыми. Builder обязан отвергнуть такой
+package до output/publication; regression не заменять file-existence assertion.
+Windows resolution extensionless command → SAME pinned `.cmd` принадлежит native
+Codex resolver/PATHEXT; shell не форкать и OS executor в plugin не добавлять.
 Task worker читает packaged work-state reference для долгих задач и нескольких
 ассистентов. WORK.md остаётся обычным Workspace data с UUID identity, не AGENTS
 или authority. Waiting goal не закрывается по native completed turn; файл не

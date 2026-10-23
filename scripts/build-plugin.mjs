@@ -98,6 +98,14 @@ function readShell(repository, lock) {
 function pluginIntegrity(files, lock) {
   const manifest = JSON.parse(files.get('plugin.json').bytes.toString());
   if (manifest.name !== 'trelio-digital-assistant') fail('Unexpected plugin identity');
+  // The portable native parser rejects legacy inline cwd "." and silently
+  // omits that server while retaining the plugin's skills. Pin this package's
+  // documented root placeholder before either build or immutable publication;
+  // this is a composition invariant, not a second general MCP schema parser.
+  const mcp = JSON.parse(files.get('mcp.json').bytes.toString());
+  if (mcp.mcpServers?.['trelio-assistant']?.cwd !== '${PLUGIN_ROOT}') {
+    fail('Portable assistant MCP cwd must use ${PLUGIN_ROOT}');
+  }
   const inventory = [...files].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
     .map(([name, entry]) => ({ path: name, mode: entry.mode, size: entry.bytes.length,
       sha256: sha256(entry.bytes) }));

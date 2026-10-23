@@ -43,6 +43,22 @@ structural retract и обычный encrypted correction Run, без direct res
 защищённый device credential и отдельную server audience `/mcp/assistant`.
 В пакет не включается human OAuth server или его настройки.
 
+Portable `mcp.json` обнаруживается по fixed root path, без legacy `.mcp.json`
+или `mcpServers` в OpenAI extension. Его `cwd` – документированный
+`${PLUGIN_ROOT}`: native portable parser отклоняет legacy `"."` ещё при discovery,
+оставляя skills доступными, но не загружая MCP server. Builder проверяет этот
+инвариант перед output/publication; package tests воспроизводят старый input.
+Одинокая проверка наличия launcher-файла не доказывает native discovery.
+
+`command: "./scripts/launch-trelio-node"` сохраняется общим с pinned shell.
+Native Codex Windows MCP launcher разрешает исполняемый файл через общий
+`program_resolver`/`which` и `PATHEXT`, включая соседний `.cmd`; hook отдельно
+использует свой `commandWindows`. Другой executable/OS selector в plugin не
+добавляется. Наличие обоих exact pinned launcher files проверяется при сборке;
+фактический запуск Windows MCP и tools остаётся отдельным read-back на устройстве.
+[Официальный local MCP пример](https://developers.openai.com/plugins/deploy/desktop-only#configure-a-local-mcp-server)
+использует тот же root placeholder.
+
 Стабильный shell из `agent-workspaces` закреплён в `shared-shell.lock.json`.
 Builder читает exact Git blobs, а не потенциально dirty checkout. Семь shell
 файлов копируются без изменения в generated output; source shell не форкается.
@@ -97,17 +113,17 @@ server pass/task policy, реальный enrollment, source → очередь 
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.0`. В этом ref
+Git source `url` этого же repository с immutable ref `plugin-v0.1.1`. В этом ref
 portable `plugin.json` находится в корне рядом с готовыми MCP/hooks/skills и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.0` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.1` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
 После exact successful source package gate на Linux/macOS/Windows оператор
-создаёт source tag `v0.1.0` и отправляет его guarded
-`npm run git:push-main -- --tag v0.1.0`. Штатный `plugin-tests.yml` для tag:
+создаёт source tag `v0.1.1` и отправляет его guarded
+`npm run git:push-main -- --tag v0.1.1`. Штатный `plugin-tests.yml` для tag:
 
 1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
    package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
@@ -120,12 +136,12 @@ Generated `.gitattributes` сохраняет exact payload bytes также п�
    commit/tree, pinned shell SHA и SHA-256 `package-integrity.json`; inventory
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
-4. Создаёт только `refs/tags/plugin-v0.1.0` одним native push и перечитывает
+4. Создаёт только `refs/tags/plugin-v0.1.1` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.0` commit,
+После workflow read-back обязан подтвердить remote `plugin-v0.1.1` commit,
 `plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
 launchers в clone этого ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
@@ -134,7 +150,7 @@ launchers в clone этого ref. Marketplace refresh должен разреш
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.0`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.1`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine

@@ -119,6 +119,7 @@ test('installed composition uses only the assistant profile and resolves onboard
   const server = mcp.mcpServers['trelio-assistant'];
   assert.deepEqual(server.args.slice(1), ['bridge', 'assistant', 'mcp']);
   assert.equal(server.type, 'stdio');
+  assert.equal(server.cwd, '${PLUGIN_ROOT}', 'portable native discovery rejects legacy cwd "."');
   assert.ok((await fs.stat(path.resolve(root, server.command))).isFile());
   assert.ok((await fs.stat(path.resolve(root, server.args[0]))).isFile());
   const extension = manifest.extensions['com.openai'];
@@ -133,6 +134,26 @@ test('installed composition uses only the assistant profile and resolves onboard
     'mcp__trelio_assistant__get_task_extra/other', 'exec_command']) {
     assert.equal(matcher.test(name), false, name);
   }
+});
+
+test('portable MCP rejects the legacy cwd before creating distributable output', async (t) => {
+  const f = await fixture(t);
+  const sourceDirectory = path.join(f.directory, 'source');
+  await fs.cp(SOURCE, sourceDirectory, { recursive: true });
+  const configPath = path.join(sourceDirectory, 'mcp.json');
+  const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+  // The old package passed file-existence checks on all three OSes. Reproduce
+  // its exact declaration, including the real file, so only the portable cwd
+  // incompatibility causes rejection before an installable tree can be sealed.
+  config.mcpServers['trelio-assistant'].cwd = '.';
+  await fs.writeFile(configPath, JSON.stringify(config));
+  await assert.rejects(buildPlugin(f.options('legacy-cwd', { sourceDirectory })),
+    /Portable assistant MCP cwd must use \$\{PLUGIN_ROOT\}/u);
+  await assert.rejects(fs.stat(path.join(f.directory, 'legacy-cwd')), { code: 'ENOENT' });
+  config.mcpServers['trelio-assistant'].cwd = '${PLUGIN_ROOT}';
+  await fs.writeFile(configPath, JSON.stringify(config));
+  await buildPlugin(f.options('portable-cwd', { sourceDirectory }));
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(f.directory, 'portable-cwd/mcp.json'))), config);
 });
 
 test('skill discovery stays concise and setup/task instruction budget is bounded', async () => {
@@ -159,9 +180,9 @@ async function distributionFixture(t) {
   const git=(...args)=>execFileSync('git',['-C',sourceRepository,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q','-b','main');git('config','core.autocrlf','false');git('add','.');
   git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Release source');
-  const sourceCommit=git('rev-parse','HEAD');git('tag','v0.1.0');
+  const sourceCommit=git('rev-parse','HEAD');git('tag','v0.1.1');
   execFileSync('git',['init','-q','--bare',remote],{stdio:['ignore','pipe','pipe']});git('remote','add','origin',remote);
-  const prepare=output=>preparePluginDistribution({sourceRepository,shellRepository:f.repository,outputDirectory:path.join(f.directory,output),sourceCommit,version:'0.1.0'});
+  const prepare=output=>preparePluginDistribution({sourceRepository,shellRepository:f.repository,outputDirectory:path.join(f.directory,output),sourceCommit,version:'0.1.1'});
   const publish=(prepared,runGit)=>publishPluginDistribution({sourceRepository,shellRepository:f.repository,prepared,runGit});
   return {...f,sourceRepository,remote,sourceCommit,git,prepare,publish};
 }
@@ -169,7 +190,7 @@ async function distributionFixture(t) {
 test('installable Git preparation is deterministic, self-contained and pins exact source, shell, bytes and modes',async t=>{
   const f=await distributionFixture(t),first=await f.prepare('first-distribution'),second=await f.prepare('second-distribution');
   assert.deepEqual(second,first);assert.equal(first.sourceCommit,f.sourceCommit);assert.equal(first.sharedShellRevision,f.lock.revision);
-  assert.equal(first.distributionRef,'refs/tags/plugin-v0.1.0');
+  assert.equal(first.distributionRef,'refs/tags/plugin-v0.1.1');
   assert.equal(f.git('rev-parse','HEAD'),f.sourceCommit,'preparation cannot switch the source checkout');
   assert.equal(f.git('rev-list','--parents','-n','1',first.distributionCommit),first.distributionCommit,'installable tree has no source/history parents');
   const tree=f.git('ls-tree','-r',first.distributionCommit);
@@ -190,17 +211,17 @@ test('installable Git preparation is deterministic, self-contained and pins exac
 
 test('source version, marketplace target, source tag and clean tracked bytes are release requirements',async t=>{
   const f=await distributionFixture(t),options={sourceRepository:f.sourceRepository,shellRepository:f.repository,
-    outputDirectory:path.join(f.directory,'rejected'),sourceCommit:f.sourceCommit,version:'0.1.0'};
+    outputDirectory:path.join(f.directory,'rejected'),sourceCommit:f.sourceCommit,version:'0.1.1'};
   await assert.rejects(preparePluginDistribution({...options,sourceCommit:'f'.repeat(40)}),/exact clean release commit/u);
-  await assert.rejects(preparePluginDistribution({...options,version:'0.1.0-draft'}),/exact clean release commit/u);
-  f.git('tag','-d','v0.1.0');await assert.rejects(preparePluginDistribution(options),/Git operation failed/u);f.git('tag','v0.1.0');
+  await assert.rejects(preparePluginDistribution({...options,version:'0.1.1-draft'}),/exact clean release commit/u);
+  f.git('tag','-d','v0.1.1');await assert.rejects(preparePluginDistribution(options),/Git operation failed/u);f.git('tag','v0.1.1');
   await fs.appendFile(path.join(f.sourceRepository,'plugins/trelio-digital-assistant/plugin.json'),'\n');
   await assert.rejects(preparePluginDistribution(options),/exact clean release commit/u);
   f.git('restore','--','plugins/trelio-digital-assistant/plugin.json');
   const catalog=path.join(f.sourceRepository,'.agents/plugins/marketplace.json'),data=JSON.parse(await fs.readFile(catalog));
   data.plugins[0].source.ref='main';await fs.writeFile(catalog,JSON.stringify(data));f.git('add','.');
   f.git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Wrong distribution source');
-  const moved=f.git('rev-parse','HEAD');f.git('tag','-d','v0.1.0');f.git('tag','v0.1.0');
+  const moved=f.git('rev-parse','HEAD');f.git('tag','-d','v0.1.1');f.git('tag','v0.1.1');
   await assert.rejects(preparePluginDistribution({...options,sourceCommit:moved}),/exact installable Git release/u);
   await assert.rejects(fs.stat(options.outputDirectory),{code:'ENOENT'});
 });
@@ -217,7 +238,7 @@ test('publication creates only the immutable generated tag and an exact repeat p
   // Real Windows CI exposed the default autocrlf rewrite. Exercise it on ALL
   // OSes instead of disabling conversion in the fixture and hiding a broken
   // install. Generated attributes must preserve every inventory byte.
-  execFileSync('git',['clone','-q','--config','core.autocrlf=true','--branch','plugin-v0.1.0',f.remote,install],{stdio:['ignore','pipe','pipe']});
+  execFileSync('git',['clone','-q','--config','core.autocrlf=true','--branch','plugin-v0.1.1',f.remote,install],{stdio:['ignore','pipe','pipe']});
   assert.equal(execFileSync('git',['-C',install,'config','--get','core.autocrlf'],{encoding:'utf8'}).trim(),'true');
   const integrity=JSON.parse(await fs.readFile(path.join(install,'package-integrity.json'),'utf8'));
   for(const file of [...integrity.files,{path:'package-integrity.json'}])
@@ -264,7 +285,7 @@ test('failed or noisy remote metadata never turns into a missing installable tag
 test('marketplace and tagged workflow publish an existing builder Git source after exact three-OS evidence',async()=>{
   const marketplace=JSON.parse(await fs.readFile(path.join(ROOT,'.agents/plugins/marketplace.json')));
   assert.equal(marketplace.name,'trelio-digital-assistants');assert.equal(marketplace.plugins.length,1);
-  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:'plugin-v0.1.0'});
+  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:'plugin-v0.1.1'});
   assert.deepEqual(marketplace.plugins[0].policy,{installation:'AVAILABLE',authentication:'ON_INSTALL'});
   const workflow=await fs.readFile(path.join(ROOT,'.github/workflows/plugin-tests.yml'),'utf8');
   assert.match(workflow,/tags: \['v\*'\]/u);assert.doesNotMatch(workflow,/tags:.*plugin-v/u);
