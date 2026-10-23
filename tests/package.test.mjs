@@ -269,6 +269,9 @@ test('marketplace and tagged workflow publish an existing builder Git source aft
   const workflow=await fs.readFile(path.join(ROOT,'.github/workflows/plugin-tests.yml'),'utf8');
   assert.match(workflow,/tags: \['v\*'\]/u);assert.doesNotMatch(workflow,/tags:.*plugin-v/u);
   assert.match(workflow,/needs: verified-source/u);assert.match(workflow,/head_sha: context\.sha/u);
+  const verifier=workflow.split('  verified-source:')[1].split('  release-package:')[0];
+  assert.match(verifier,/contents: read/u);assert.match(verifier,/actions: read/u);
+  assert.match(verifier,/git merge-base --is-ancestor "\$GITHUB_SHA" refs\/remotes\/origin\/main/u);
   assert.match(workflow,/\['ubuntu-latest','macos-latest','windows-latest'\]/u);
   assert.match(workflow,/ref: \$\{\{ steps\.shell\.outputs\.revision \}\}/u);
   assert.match(workflow,/preparePluginDistribution/u);assert.match(workflow,/publishPluginDistribution/u);
