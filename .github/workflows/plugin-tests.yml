@@ -2,11 +2,16 @@ name: Plugin package
 on:
   push:
     branches: [main, 'codex/**']
+    # Installable plugin-v* refs are generated output, never another release
+    # trigger. Only the separately reviewed source tag enters publication.
+    tags: ['v*']
   pull_request:
 permissions:
   contents: read
 jobs:
   package:
+    name: Plugin package (${{ matrix.os }})
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     strategy:
       fail-fast: false
       matrix:
@@ -20,3 +25,106 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
+
+  verified-source:
+    name: Verify exact source package gates
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    outputs:
+      run-id: ${{ steps.gate.outputs.run-id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a released main ancestor and its complete three-OS gate
+        id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.repo.owner !== 'trelio-ru' || context.repo.repo !== 'digital-assistants'
+                || !/^refs\/tags\/v\d+\.\d+\.\d+$/.test(context.ref)) throw new Error('Unexpected release identity');
+            await exec.exec('git', ['merge-base', '--is-ancestor', context.sha, 'refs/remotes/origin/main']);
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              ...context.repo, workflow_id: 'plugin-tests.yml', head_sha: context.sha, status: 'success', per_page: 100,
+            });
+            const names = ['ubuntu-latest','macos-latest','windows-latest'].map(os => `Plugin package (${os})`);
+            for (const run of runs) {
+              if (run.head_sha !== context.sha || !['push','pull_request'].includes(run.event)
+                  || run.event === 'push' && run.head_branch !== 'main' && !run.head_branch?.startsWith('codex/')) continue;
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                ...context.repo, run_id: run.id, filter: 'latest', per_page: 100,
+              });
+              if (names.every(name => jobs.some(job => job.name === name && job.conclusion === 'success'))) {
+                core.setOutput('run-id', String(run.id)); return;
+              }
+            }
+            throw new Error('Exact successful Linux/macOS/Windows source package gate is required');
+
+  release-package:
+    name: Publish installable Git source
+    needs: verified-source
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read exact shared shell pin
+        id: shell
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const lock=JSON.parse(fs.readFileSync('shared-shell.lock.json','utf8'));
+          if(lock.repository!=='https://github.com/trelio-ru/agent-workspaces.git'||!/^[a-f0-9]{40}$/.test(lock.revision))throw Error('Invalid shell pin');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`revision=${lock.revision}\n`);
+          NODE
+      - uses: actions/checkout@v4
+        with:
+          repository: trelio-ru/agent-workspaces
+          ref: ${{ steps.shell.outputs.revision }}
+          path: _shared-shell
+          persist-credentials: false
+      - name: Build exact installable source with the existing builder
+        env:
+          SOURCE_GATE_RUN_ID: ${{ needs.verified-source.outputs.run-id }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          import path from 'node:path';
+          import {preparePluginDistribution} from './scripts/build-plugin.mjs';
+          const prepared=await preparePluginDistribution({sourceRepository:process.cwd(),shellRepository:path.resolve('_shared-shell'),
+            outputDirectory:path.join(process.env.RUNNER_TEMP,'plugin'),sourceCommit:process.env.GITHUB_SHA,version:process.env.GITHUB_REF_NAME.slice(1)});
+          await fs.writeFile(path.join(process.env.RUNNER_TEMP,'distribution.json'),JSON.stringify(prepared,null,2)+'\n');
+          await fs.writeFile(path.join(process.env.RUNNER_TEMP,'source-gate.json'),JSON.stringify({sourceCommit:prepared.sourceCommit,runId:process.env.SOURCE_GATE_RUN_ID})+'\n');
+          NODE
+      - name: Retain exact package bytes and structural provenance
+        id: artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trelio-digital-assistant-${{ github.ref_name }}
+          path: |
+            ${{ runner.temp }}/plugin/
+            ${{ runner.temp }}/distribution.json
+            ${{ runner.temp }}/source-gate.json
+          if-no-files-found: error
+      - name: Create immutable installable ref and read it back once
+        env:
+          RELEASE_ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          RELEASE_ARTIFACT_DIGEST: ${{ steps.artifact.outputs.artifact-digest }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          import path from 'node:path';
+          import {publishPluginDistribution} from './scripts/build-plugin.mjs';
+          const prepared=JSON.parse(await fs.readFile(path.join(process.env.RUNNER_TEMP,'distribution.json'),'utf8'));
+          const result=await publishPluginDistribution({sourceRepository:process.cwd(),shellRepository:path.resolve('_shared-shell'),prepared});
+          await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,JSON.stringify({...result,artifactId:process.env.RELEASE_ARTIFACT_ID,
+            artifactDigest:process.env.RELEASE_ARTIFACT_DIGEST},null,2)+'\n');
+          NODE

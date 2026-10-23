@@ -1,0 +1,21 @@
+{
+  "name": "trelio-digital-assistants",
+  "interface": {
+    "displayName": "Цифровой ассистент Trelio"
+  },
+  "plugins": [
+    {
+      "name": "trelio-digital-assistant",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/trelio-ru/digital-assistants.git",
+        "ref": "plugin-v0.1.0"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

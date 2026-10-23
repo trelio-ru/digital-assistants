@@ -88,8 +88,51 @@ Tests используют отдельный fixture Git repository: измен
 Сборка – проверка устанавливаемой структуры, а не свидетельство работающего
 assistant MCP/daemon. До активации нужны реализованный signed assistant entry,
 server pass/task policy, реальный enrollment, source → очередь → тот же native chat
-→ business receipt и фактическое следующее пробуждение. Сейчас product release,
-marketplace publication и изменение существующего Windows-пилота не выполняются.
+→ business receipt и фактическое следующее пробуждение. Обычная публикация
+компонентов и последующий acceptance на production Windows – отдельные шаги;
+зелёный package gate не является результатом business acceptance.
+
+<a id="marketplace-release"></a>
+
+## Marketplace release
+
+Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
+Git source `url` этого же repository с immutable ref `plugin-v0.1.0`. В этом ref
+portable `plugin.json` находится в корне рядом с готовыми MCP/hooks/skills и семью
+неизменёнными shell файлами. Это generated installable tree, а не editable fork
+shell. Source tag `v0.1.0` остаётся на проверенном source commit в main.
+ZIP/artifact URL не используется как новый marketplace source.
+
+После exact successful source package gate на Linux/macOS/Windows оператор
+создаёт source tag `v0.1.0` и отправляет его guarded
+`npm run git:push-main -- --tag v0.1.0`. Штатный `plugin-tests.yml` для tag:
+
+1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
+   package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
+2. Берёт human shell только из exact `shared-shell.lock.json` Git revision и
+   вызывает существующий builder. Native release helpers того же builder
+   сверяют payload с tagged source и pinned shell. Нет credentials, runtime
+   cache, installer, нового executor или изменённого human implementation.
+3. Сохраняет installable files, `distribution.json` и `source-gate.json` одним
+   hosted artifact. `distribution.json` связывает source SHA/tag, exact orphan
+   commit/tree, pinned shell SHA и SHA-256 `package-integrity.json`; inventory
+   связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
+   workflow summary вместе с exact source и Git ref.
+4. Создаёт только `refs/tags/plugin-v0.1.0` одним native push и перечитывает
+   exact remote commit. Existing equal ref означает уже опубликованный результат;
+   mismatch не перезаписывается. Lost reply разрешает только read-back, без
+   автоматического force/replay. Generated tag исключён из release triggers.
+
+После workflow read-back обязан подтвердить remote `plugin-v0.1.0` commit,
+`plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
+launchers в clone этого ref. Marketplace refresh должен разрешить ту же запись;
+до этого нельзя объявлять distribution доступной. Следующая plugin version
+получает новый source tag и новый generated ref; прежние tags остаются immutable.
+
+Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
+Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
+поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
+version – `0.1.0`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
