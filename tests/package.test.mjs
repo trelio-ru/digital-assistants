@@ -173,7 +173,7 @@ test('installable Git preparation is deterministic, self-contained and pins exac
   assert.equal(f.git('rev-parse','HEAD'),f.sourceCommit,'preparation cannot switch the source checkout');
   assert.equal(f.git('rev-list','--parents','-n','1',first.distributionCommit),first.distributionCommit,'installable tree has no source/history parents');
   const tree=f.git('ls-tree','-r',first.distributionCommit);
-  assert.equal(tree.split('\n').length,14);assert.match(tree,/100755 blob [a-f0-9]{40}\tscripts\/launch-trelio-node/u);
+  assert.equal(tree.split('\n').length,15);assert.match(tree,/100755 blob [a-f0-9]{40}\tscripts\/launch-trelio-node/u);
   assert.doesNotMatch(tree,/credential|node_modules|AGENTS\.md|\.git\//u);
   const inventory=JSON.parse(f.git('show',`${first.distributionCommit}:package-integrity.json`));
   const inventoryBytes=Buffer.from(f.git('show',`${first.distributionCommit}:package-integrity.json`)+'\n');
@@ -214,10 +214,15 @@ test('publication creates only the immutable generated tag and an exact repeat p
   const replay=await f.publish(prepared,runGit);assert.equal(replay.alreadyPublished,true);
   assert.equal(args.filter(argv=>argv[0]==='push').length,1);assert.ok(args.every(argv=>!argv.some(value=>value.startsWith('--force'))));
   const install=path.join(f.directory,'installed');
-  execFileSync('git',['clone','-q','--branch','plugin-v0.1.0',f.remote,install],{stdio:['ignore','pipe','pipe']});
-  assert.deepEqual(await fs.readFile(path.join(install,'plugin.json')),await fs.readFile(path.join(f.directory,'publish/plugin.json')));
-  assert.deepEqual(await fs.readFile(path.join(install,'scripts/trelio-host-runtime-loader.mjs')),
-    await fs.readFile(path.join(f.directory,'publish/scripts/trelio-host-runtime-loader.mjs')));
+  // Real Windows CI exposed the default autocrlf rewrite. Exercise it on ALL
+  // OSes instead of disabling conversion in the fixture and hiding a broken
+  // install. Generated attributes must preserve every inventory byte.
+  execFileSync('git',['clone','-q','--config','core.autocrlf=true','--branch','plugin-v0.1.0',f.remote,install],{stdio:['ignore','pipe','pipe']});
+  assert.equal(execFileSync('git',['-C',install,'config','--get','core.autocrlf'],{encoding:'utf8'}).trim(),'true');
+  const integrity=JSON.parse(await fs.readFile(path.join(install,'package-integrity.json'),'utf8'));
+  for(const file of [...integrity.files,{path:'package-integrity.json'}])
+    assert.deepEqual(await fs.readFile(path.join(install,file.path)),await fs.readFile(path.join(f.directory,'publish',file.path)));
+  assert.equal(await fs.readFile(path.join(install,'.gitattributes'),'utf8'),'* -text\n');
 });
 
 test('a lost successful push reply is recovered by exact read-back without a second write',async t=>{

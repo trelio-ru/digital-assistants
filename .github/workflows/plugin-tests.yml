@@ -114,6 +114,9 @@ jobs:
             ${{ runner.temp }}/distribution.json
             ${{ runner.temp }}/source-gate.json
           if-no-files-found: error
+          # Only the builder's closed payload and structural provenance enter
+          # this directory. Keep generated .gitattributes for byte-exact clones.
+          include-hidden-files: true
       - name: Create immutable installable ref and read it back once
         env:
           RELEASE_ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}

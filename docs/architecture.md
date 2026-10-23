@@ -102,6 +102,8 @@ portable `plugin.json` находится в корне рядом с готов
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
 shell. Source tag `v0.1.0` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
+Generated `.gitattributes` сохраняет exact payload bytes также при Windows
+`core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
 После exact successful source package gate на Linux/macOS/Windows оператор
 создаёт source tag `v0.1.0` и отправляет его guarded

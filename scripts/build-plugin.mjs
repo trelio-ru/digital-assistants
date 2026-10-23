@@ -107,6 +107,14 @@ function pluginIntegrity(files, lock) {
 const integrityFile = integrity => ({
   bytes: Buffer.from(JSON.stringify(integrity, null, 2) + '\n'), mode: 0o644,
 });
+function completePluginFiles(files, shellRepository, lock) {
+  for (const [name, entry] of readShell(shellRepository, lock)) files.set(name, entry);
+  // Git-backed installation must preserve the very bytes in the inventory.
+  // In particular Windows autocrlf cannot rewrite the pinned loader/launcher
+  // after publication. This fixed generated metadata adds no shell behavior.
+  files.set('.gitattributes', {bytes:Buffer.from('* -text\n'),mode:0o644});
+  return files;
+}
 
 export async function buildPlugin({ shellRepository, outputDirectory,
   sourceDirectory = path.join(ROOT, 'plugins/trelio-digital-assistant'),
@@ -115,8 +123,7 @@ export async function buildPlugin({ shellRepository, outputDirectory,
     fail('Provide --shell-repo and an absolute --output directory');
   }
   const lock = JSON.parse(await fs.readFile(lockPath, 'utf8'));
-  const files = await readSource(sourceDirectory);
-  for (const [name, entry] of readShell(shellRepository, lock)) files.set(name, entry);
+  const files = completePluginFiles(await readSource(sourceDirectory), shellRepository, lock);
   // Hash payload and modes, omitting timestamps and local absolute paths. The
   // manifest is an integrity inventory, not a publisher signature or admission.
   const integrity = pluginIntegrity(files, lock);
@@ -176,7 +183,7 @@ function distributionSource(repository, sourceCommit, version) {
 
 function expectedDistribution(repository, shellRepository, sourceCommit, version) {
   const source = distributionSource(repository, sourceCommit, version);
-  for (const [name, entry] of readShell(shellRepository, source.lock)) source.files.set(name, entry);
+  completePluginFiles(source.files, shellRepository, source.lock);
   const integrity = pluginIntegrity(source.files, source.lock);
   source.files.set('package-integrity.json', integrityFile(integrity));
   return { ...source, integrity };
