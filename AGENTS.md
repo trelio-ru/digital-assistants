@@ -36,7 +36,8 @@ Task worker читает packaged work-state reference для долгих за�
 или authority. Waiting goal не закрывается по native completed turn; файл не
 заменяет подтверждённый server pass/outcome или фактическое расписание.
 Own-error reference использует live dedicated repair, verified accepted files и
-сохранение поздних правок; source/correction не заменяют бизнес-результат цели.
+сохранение поздних правок; encrypted repair идёт через обычный correction Run,
+source/correction не заменяют бизнес-результат цели.
 Private-credential reference использует live sealed owner intent и общий host;
 empty-card approval не разрешает generation/signup, values не входят в state.
 `scripts/build-plugin.mjs` читает только regular source и exact Git blobs общего

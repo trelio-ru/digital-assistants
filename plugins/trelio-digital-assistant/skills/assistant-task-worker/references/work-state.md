@@ -99,6 +99,13 @@ and other assistants' state. Preserve useful dirty local work through ordinary
 bridge recovery. A semantic conflict or missing capability is a concrete blocker;
 do not reset local history or use human OAuth to get around it.
 
+In an encrypted company, use the same structural `retract`, then correct files
+through an ordinary encrypted `no_status_change` Run from the current head. Read
+the erroneous own base/delta locally, reverse only that error, and preserve later
+edits and current bridge control files. Direct native `restore` is plain-only;
+do not send a raw reason or switch to human OAuth/server Git. Use the same final
+accepted-file verification and `correctionRunId` step below.
+
 Read and verify the resulting accepted files. Then `retract` the original Run
 again with its verified accepted `correctionRunId` and exact current head. The
 erroneous source and its correction cannot be reused as business completion,

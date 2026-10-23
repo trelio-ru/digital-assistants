@@ -31,7 +31,8 @@ read не создаёт writable Run. Отсутствие нужного read/
 проверка и фактический следующий wake фиксируются структурным runtime protocol.
 Task-worker reference также описывает own-error flow: retire accepted evidence,
 safe native restore либо selective reversal с сохранением поздних правок,
-проверка accepted файлов и запись correction. Ошибка и её исправление не
+проверка accepted файлов и запись correction. Encrypted repair использует тот же
+structural retract и обычный encrypted correction Run, без direct restore. Ошибка и её исправление не
 закрывают человеческую цель; live dedicated capability и общий ACL обязательны.
 
 ## Формат и shared shell
