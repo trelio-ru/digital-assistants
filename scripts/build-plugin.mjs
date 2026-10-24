@@ -13,6 +13,11 @@ export const SHELL_FILES = Object.freeze([
 ]);
 const SOURCE_FILES = Object.freeze([
   'plugin.json', 'mcp.json', 'hooks/hooks.json',
+  // Presentation assets belong to this plugin, not the pinned shared shell.
+  // Keep every manifest image explicit so both local and tagged builds include
+  // identical reviewed bytes in their integrity inventories.
+  'assets/trelio-assistant-composer-icon.svg',
+  'assets/trelio-assistant-logo.svg', 'assets/trelio-assistant-logo-dark.svg',
   'skills/assistant-setup/SKILL.md', 'skills/assistant-task-worker/SKILL.md',
   'skills/assistant-task-worker/references/work-state.md',
 ]);

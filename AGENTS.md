@@ -30,6 +30,8 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 
 Portable manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
 Список payload ограничен builder; новый файл требует осознанного включения.
+Иконки в `assets/` сохраняют знак человеческого плагина с добавленным курсором;
+manifest paths и payload inventory меняются согласованно, без правки shared shell.
 Typed Workspace flow – `docs/architecture.md`; model не выбирает directory/proof.
 Setup skill разделяет paired/live-contact и background receipts от business
 проверки в постоянном task chat. Six-present setup не запускает new-chat/reload/

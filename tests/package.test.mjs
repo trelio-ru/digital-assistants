@@ -123,6 +123,15 @@ test('installed composition uses only the assistant profile and resolves onboard
   assert.ok((await fs.stat(path.resolve(root, server.command))).isFile());
   assert.ok((await fs.stat(path.resolve(root, server.args[0]))).isFile());
   const extension = manifest.extensions['com.openai'];
+  // Resolve images from the BUILT plugin root: a source-only SVG must not pass
+  // while the marketplace package still falls back to the generic icon.
+  for (const field of ['composerIcon', 'logo', 'logoDark']) {
+    const relative = extension.interface[field];
+    assert.match(relative, /^\.\/assets\/[^/]+\.svg$/u);
+    const bytes = await fs.readFile(path.resolve(root, relative), 'utf8');
+    assert.match(bytes, /<svg[^>]+viewBox="0 0 512 512"/u);
+    assert.ok((await fs.stat(path.resolve(root, relative))).isFile());
+  }
   assert.ok((await fs.stat(path.resolve(root, extension.onboardingSkill))).isFile());
   const hooks = JSON.parse(await fs.readFile(path.resolve(root, extension.hooks)));
   const matcher = new RegExp(hooks.hooks.PreToolUse[0].matcher);
@@ -194,7 +203,7 @@ test('installable Git preparation is deterministic, self-contained and pins exac
   assert.equal(f.git('rev-parse','HEAD'),f.sourceCommit,'preparation cannot switch the source checkout');
   assert.equal(f.git('rev-list','--parents','-n','1',first.distributionCommit),first.distributionCommit,'installable tree has no source/history parents');
   const tree=f.git('ls-tree','-r',first.distributionCommit);
-  assert.equal(tree.split('\n').length,15);assert.match(tree,/100755 blob [a-f0-9]{40}\tscripts\/launch-trelio-node/u);
+  assert.equal(tree.split('\n').length,18);assert.match(tree,/100755 blob [a-f0-9]{40}\tscripts\/launch-trelio-node/u);
   assert.doesNotMatch(tree,/credential|node_modules|AGENTS\.md|\.git\//u);
   const inventory=JSON.parse(f.git('show',`${first.distributionCommit}:package-integrity.json`));
   const inventoryBytes=Buffer.from(f.git('show',`${first.distributionCommit}:package-integrity.json`)+'\n');

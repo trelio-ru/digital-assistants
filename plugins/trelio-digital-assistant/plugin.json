@@ -17,6 +17,9 @@
         "category": "Productivity",
         "capabilities": ["Read", "Write"],
         "websiteURL": "https://trelio.ru",
+        "composerIcon": "./assets/trelio-assistant-composer-icon.svg",
+        "logo": "./assets/trelio-assistant-logo.svg",
+        "logoDark": "./assets/trelio-assistant-logo-dark.svg",
         "defaultPrompt": ["Настрой этот компьютер цифрового ассистента Trelio."]
       }
     }

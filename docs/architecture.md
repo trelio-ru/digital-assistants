@@ -100,6 +100,13 @@ review/trust пользователем; пакет не меняет config и�
 
 ## Сборка и проверка
 
+OpenAI interface явно объявляет `composerIcon`, `logo` и `logoDark` из `assets/`.
+Иконка сохраняет геометрию трёх полос человеческого плагина и добавляет синий
+курсор внизу справа. Светлый и тёмный listing logo имеют прозрачный фон;
+composer, как у человеческого плагина, использует собственную белую подложку.
+Это presentation assets ассистента: они входят в явный список builder и
+integrity inventory, не меняют общий shell или его pin.
+
 `npm run build -- --shell-repo /absolute/agent-workspaces --output /new/directory`
 собирает standalone plugin folder. Выходной путь должен отсутствовать. В нём
 `package-integrity.json` фиксирует точные источники и SHA-256 каждого payload file.
