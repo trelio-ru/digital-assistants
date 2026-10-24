@@ -65,6 +65,15 @@ Builder читает exact Git blobs, а не потенциально dirty che
 Версия shell 3.2.3 обозначает совместимость общей проверки подписи и не является
 версией нового плагина. Runtime packages, токены и локальные caches не включаются.
 
+Общий [контракт проверки влияния релиза](https://github.com/trelio-ru/agent-workspaces/blob/main/docs/plugin-setup-and-policies.md#совместимость-общей-оболочки)
+живёт у канонического human shell. Его технические исправления проверяются и
+для ассистента: exact source diff → candidate lock → штатные compatibility
+проверки и воспроизводимая сборка → согласованный выпуск либо явное обоснование
+«не применимо». Impact receipt сохраняет обе exact revisions и результат
+проверок. Floating `main` и локальная правка скопированного shell не допускаются;
+human-specific OAuth, manifests и инструкции автоматически не переносятся.
+Compatible signed runtime update не меняет этот pin и не требует plugin release.
+
 Private-credential flow находится в существующем task-worker reference.
 Он маршрутизирует live native owner intent, empty-card либо NEW password
 generation, encrypted neutral metadata и protected browser/signed-skill use.
