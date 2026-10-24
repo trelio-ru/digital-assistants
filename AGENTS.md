@@ -31,6 +31,9 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 Portable manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
 Список payload ограничен builder; новый файл требует осознанного включения.
 Typed Workspace flow – `docs/architecture.md`; model не выбирает directory/proof.
+Setup skill разделяет paired/live-contact и background receipts от business
+проверки в постоянном task chat. Six-present setup не запускает new-chat/reload/
+reinstall loop ради task tools; task-pass/proof и observed hook даёт runtime.
 Portable MCP cwd фиксирован как `${PLUGIN_ROOT}`: legacy inline `"."` native parser
 не принимает, хотя skills остаются видимыми. Builder обязан отвергнуть такой
 package до output/publication; regression не заменять file-existence assertion.

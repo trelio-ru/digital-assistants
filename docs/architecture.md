@@ -110,29 +110,33 @@ Tests используют отдельный fixture Git repository: измен
 
 ## Готовность
 
-Сборка – проверка устанавливаемой структуры, а не свидетельство работающего
-assistant MCP/daemon. До активации нужны реализованный signed assistant entry,
-server pass/task policy, реальный enrollment, source → очередь → тот же native chat
-→ business receipt и фактическое следующее пробуждение. Обычная публикация
-компонентов и последующий acceptance на production Windows – отдельные шаги;
-зелёный package gate не является результатом business acceptance.
+Сборка проверяет устанавливаемую структуру. Реальный enrollment/live contact и
+background install/start/status подтверждают настройку компьютера в своём scope;
+они не являются business receipt. Setup chat не обязан получить task tools:
+при уже доступных шести setup tools новый chat/reload/reinstall не заменяет
+проверку фонового runtime. Его проход требует native company/model/task admission,
+действующего pass и observed hook в постоянном чате принятой задачи.
+Source → очередь → тот же native chat → business receipt → фактическое следующее
+пробуждение проверяются отдельно после нужных настроек/разрешений. Обычная
+публикация компонентов и acceptance на production Windows – разные шаги;
+зелёный package gate не подтверждает business acceptance.
 
 <a id="marketplace-release"></a>
 
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.1`. В этом ref
+Git source `url` этого же repository с immutable ref `plugin-v0.1.2`. В этом ref
 portable `plugin.json` находится в корне рядом с готовыми MCP/hooks/skills и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.1` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.2` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
 После exact successful source package gate на Linux/macOS/Windows оператор
-создаёт source tag `v0.1.1` и отправляет его guarded
-`npm run git:push-main -- --tag v0.1.1`. Штатный `plugin-tests.yml` для tag:
+создаёт source tag `v0.1.2` и отправляет его guarded
+`npm run git:push-main -- --tag v0.1.2`. Штатный `plugin-tests.yml` для tag:
 
 1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
    package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
@@ -145,12 +149,12 @@ Generated `.gitattributes` сохраняет exact payload bytes также п�
    commit/tree, pinned shell SHA и SHA-256 `package-integrity.json`; inventory
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
-4. Создаёт только `refs/tags/plugin-v0.1.1` одним native push и перечитывает
+4. Создаёт только `refs/tags/plugin-v0.1.2` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.1` commit,
+После workflow read-back обязан подтвердить remote `plugin-v0.1.2` commit,
 `plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
 launchers в clone этого ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
@@ -159,7 +163,7 @@ launchers в clone этого ref. Marketplace refresh должен разреш
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.1`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.2`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
