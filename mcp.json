@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "trelio-assistant": {
+      "type": "stdio",
+      "command": "./scripts/launch-trelio-node",
+      "args": ["./scripts/trelio-host-runtime-loader.mjs", "bridge", "assistant", "mcp"],
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}
