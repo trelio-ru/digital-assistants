@@ -5,7 +5,7 @@
 и циклы в общем host runtime. Владелец подтверждает привязку на своём устройстве;
 его Trelio browser-session не переносится на компьютер ассистента.
 
-Пакет: `plugins/trelio-digital-assistant`, portable manifest/MCP/hooks и две skills.
+Пакет: `plugins/trelio-digital-assistant`, единый source manifest/MCP/hooks и две skills; builder выдаёт native Codex manifest.
 Общий stable shell добавляется только при сборке из exact Git revision:
 
 ```sh
@@ -37,9 +37,14 @@ codex plugin marketplace add trelio-ru/digital-assistants --ref main
 ```
 
 Каталог `trelio-digital-assistants` предлагает `trelio-digital-assistant`.
-Его source – immutable `plugin-v0.1.2` с готовым плагином в корне Git tree.
-Source tag `v0.1.2` и generated tag различаются: папка `plugins/` на main
+Его source – immutable `plugin-v0.1.3` с готовым плагином в корне Git tree.
+Source tag `v0.1.3` и generated tag различаются: папка `plugins/` на main
 остаётся исходниками, а семь shared shell файлов добавляет прежний builder.
 До успешного tagged workflow и read-back generated ref установка из каталога
 ещё недоступна. Marketplace registration не устанавливает плагин и не включает
 его Hooks. Выпуск и проверка bytes – [контракт](docs/architecture.md#marketplace-release).
+
+Codex 0.164 пропускает lifecycle hooks root Agent Plugins. Устанавливаемый пакет
+поэтому использует `.codex-plugin/plugin.json`, как человеческий Trelio plugin.
+Native Windows gate проверяет реальное обнаружение трёх hooks без их одобрения.
+Общий shell и hook bytes сохраняются; доверие подтверждает человек в Codex.

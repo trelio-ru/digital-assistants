@@ -101,16 +101,8 @@ function readShell(repository, lock) {
  * generated ref contains these exact bytes/modes, not another shell source or
  * a ZIP transport invented by the marketplace. */
 function pluginIntegrity(files, lock) {
-  const manifest = JSON.parse(files.get('plugin.json').bytes.toString());
+  const manifest = JSON.parse(files.get('.codex-plugin/plugin.json').bytes.toString());
   if (manifest.name !== 'trelio-digital-assistant') fail('Unexpected plugin identity');
-  // The portable native parser rejects legacy inline cwd "." and silently
-  // omits that server while retaining the plugin's skills. Pin this package's
-  // documented root placeholder before either build or immutable publication;
-  // this is a composition invariant, not a second general MCP schema parser.
-  const mcp = JSON.parse(files.get('mcp.json').bytes.toString());
-  if (mcp.mcpServers?.['trelio-assistant']?.cwd !== '${PLUGIN_ROOT}') {
-    fail('Portable assistant MCP cwd must use ${PLUGIN_ROOT}');
-  }
   const inventory = [...files].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
     .map(([name, entry]) => ({ path: name, mode: entry.mode, size: entry.bytes.length,
       sha256: sha256(entry.bytes) }));
@@ -121,6 +113,34 @@ const integrityFile = integrity => ({
   bytes: Buffer.from(JSON.stringify(integrity, null, 2) + '\n'), mode: 0o644,
 });
 function completePluginFiles(files, shellRepository, lock) {
+  // Codex 0.164 discovers skills/MCP from an Agent Plugins root manifest but
+  // explicitly skips that format's lifecycle hooks. File existence therefore
+  // did not prove admission on Windows. Emit its supported native manifest,
+  // exactly as the human plugin does; NEVER retain root plugin.json, which
+  // wins native discovery and would silently select the hook-less format.
+  // Only presentation/paths are translated. Hook bytes, shared shell, device
+  // endpoint, approval/trust and all runtime authority remain unchanged.
+  const portable = JSON.parse(files.get('plugin.json').bytes.toString());
+  const extension = portable.extensions?.['com.openai'];
+  const mcp = JSON.parse(files.get('mcp.json').bytes.toString());
+  const server = mcp.mcpServers?.['trelio-assistant'];
+  if (Object.keys(mcp.mcpServers ?? {}).join(',') !== 'trelio-assistant'
+    || server?.cwd !== '${PLUGIN_ROOT}' || server.type !== 'stdio'
+    || extension?.hooks !== './hooks/hooks.json') fail('Unsupported assistant source composition');
+  const { type: _type, cwd: _cwd, ...nativeServer } = server;
+  const manifest = { name: portable.name, version: portable.version,
+    description: portable.description, author: portable.author,
+    repository: portable.repository, skills: './skills/',
+    hooks: extension.hooks, onboardingSkill: extension.onboardingSkill,
+    interface: extension.interface,
+    // Native compatibility discovery resolves "." from the plugin root. The
+    // portable source keeps ${PLUGIN_ROOT}; do not confuse the two parsers.
+    mcpServers: { 'trelio-assistant': { ...nativeServer, cwd: '.' } } };
+  files.delete('plugin.json');
+  files.delete('mcp.json');
+  files.set('.codex-plugin/plugin.json', {
+    bytes: Buffer.from(JSON.stringify(manifest, null, 2) + '\n'), mode: 0o644,
+  });
   for (const [name, entry] of readShell(shellRepository, lock)) files.set(name, entry);
   // Git-backed installation must preserve the very bytes in the inventory.
   // In particular Windows autocrlf cannot rewrite the pinned loader/launcher

@@ -28,7 +28,7 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 
 ## Пакет и проверки
 
-Portable manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
+Source manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
 Список payload ограничен builder; новый файл требует осознанного включения.
 Иконки в `assets/` сохраняют знак человеческого плагина с добавленным курсором;
 manifest paths и payload inventory меняются согласованно, без правки shared shell.
@@ -36,11 +36,15 @@ Typed Workspace flow – `docs/architecture.md`; model не выбирает dir
 Setup skill разделяет paired/live-contact и background receipts от business
 проверки в постоянном task chat. Six-present setup не запускает new-chat/reload/
 reinstall loop ради task tools; task-pass/proof и observed hook даёт runtime.
-Portable MCP cwd фиксирован как `${PLUGIN_ROOT}`: legacy inline `"."` native parser
-не принимает, хотя skills остаются видимыми. Builder обязан отвергнуть такой
-package до output/publication; regression не заменять file-existence assertion.
-Windows resolution extensionless command → SAME pinned `.cmd` принадлежит native
-Codex resolver/PATHEXT; shell не форкать и OS executor в plugin не добавлять.
+Codex 0.164 пропускает hooks формата root Agent Plugins, хотя видит его MCP/skills.
+Builder генерирует совместимый `.codex-plugin/plugin.json`, как у human plugin,
+из единственного source manifest/MCP; root `plugin.json`/`mcp.json` в artifact
+не остаются. Source portable cwd `${PLUGIN_ROOT}` проверяется до перевода в
+native inline cwd `.`. Hook/shell bytes неизменны; discovery не одобряет trust.
+Native Windows CLI gate устанавливает только isolated fixture package, читает
+`hooks/list` и требует ровно три untrusted hooks, без аккаунта/model/Trelio MCP.
+Windows command resolution принадлежит общему Codex resolver/PATHEXT; shell
+не форкать и OS executor в plugin не добавлять.
 Task worker читает packaged work-state reference для долгих задач и нескольких
 ассистентов. WORK.md остаётся обычным Workspace data с UUID identity, не AGENTS
 или authority. Waiting goal не закрывается по native completed turn; файл не

@@ -37,18 +37,24 @@ structural retract и обычный encrypted correction Run, без direct res
 
 ## Формат и shared shell
 
-Используется portable `plugin.json` + `mcp.json` и OpenAI extension по
-[официальному контракту](https://developers.openai.com/plugins/build/plugins).
-Подключение – только локальный `trelio-assistant` stdio server, который использует
-защищённый device credential и отдельную server audience `/mcp/assistant`.
-В пакет не включается human OAuth server или его настройки.
+Source использует portable `plugin.json` + `mcp.json` для единственного описания
+метаданных. Устанавливаемый пакет использует поддерживаемый Codex compatibility
+manifest `.codex-plugin/plugin.json`, как человеческий плагин. Codex
+`0.164.0-alpha.11.1` реально видел MCP/skills portable пакета, но возвращал ноль
+hooks и в `hooks/list`, и в `/hooks`. В [native loader](https://github.com/openai/codex/blob/main/codex-rs/core-plugins/src/loader.rs)
+формат `AgentPlugin` явно получает пустые hook sources. Наличие файла hooks и
+корректного extension поэтому не является проверкой discovery.
 
-Portable `mcp.json` обнаруживается по fixed root path, без legacy `.mcp.json`
-или `mcpServers` в OpenAI extension. Его `cwd` – документированный
-`${PLUGIN_ROOT}`: native portable parser отклоняет legacy `"."` ещё при discovery,
-оставляя skills доступными, но не загружая MCP server. Builder проверяет этот
-инвариант перед output/publication; package tests воспроизводят старый input.
-Одинокая проверка наличия launcher-файла не доказывает native discovery.
+Один builder переводит только metadata/paths: flat interface, skills/onboarding,
+hooks и inline MCP. Source `${PLUGIN_ROOT}` становится native `cwd: "."` под
+compatibility parser. Root `plugin.json` удаляется из generated inventory:
+иначе он имеет приоритет и снова выбирает формат без hooks. Второго server,
+executor, схемы авторизации или копии shell нет. Исходные hook bytes сохранены.
+Native Windows gate использует официальный Codex `rust-v0.164.0`, pinned hashes,
+изолированные HOME/USERPROFILE/CODEX_HOME и local fixture marketplace. Он требует
+три обнаруженных `untrusted` hooks без входа, model turn, Trelio MCP execution
+или изменения trust. После обновления пользователь один раз просматривает hooks
+в штатном клиенте. Запись trusted_hash или обход trust агентом запрещены.
 
 `command: "./scripts/launch-trelio-node"` сохраняется общим с pinned shell.
 Native Codex Windows MCP launcher разрешает исполняемый файл через общий
@@ -133,17 +139,17 @@ Source → очередь → тот же native chat → business receipt → �
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.2`. В этом ref
-portable `plugin.json` находится в корне рядом с готовыми MCP/hooks/skills и семью
+Git source `url` этого же repository с immutable ref `plugin-v0.1.3`. В этом ref
+native `.codex-plugin/plugin.json` находится рядом с готовыми hooks/skills и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.2` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.3` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
 После exact successful source package gate на Linux/macOS/Windows оператор
-создаёт source tag `v0.1.2` и отправляет его guarded
-`npm run git:push-main -- --tag v0.1.2`. Штатный `plugin-tests.yml` для tag:
+создаёт source tag `v0.1.3` и отправляет его guarded
+`npm run git:push-main -- --tag v0.1.3`. Штатный `plugin-tests.yml` для tag:
 
 1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
    package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
@@ -156,13 +162,13 @@ Generated `.gitattributes` сохраняет exact payload bytes также п�
    commit/tree, pinned shell SHA и SHA-256 `package-integrity.json`; inventory
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
-4. Создаёт только `refs/tags/plugin-v0.1.2` одним native push и перечитывает
+4. Создаёт только `refs/tags/plugin-v0.1.3` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.2` commit,
-`plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
+После workflow read-back обязан подтвердить remote `plugin-v0.1.3` commit,
+`.codex-plugin/plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
 launchers в clone этого ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
 получает новый source tag и новый generated ref; прежние tags остаются immutable.
@@ -170,7 +176,7 @@ launchers в clone этого ref. Marketplace refresh должен разреш
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.2`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.3`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine

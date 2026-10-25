@@ -25,6 +25,27 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
+      - name: Read exact shared shell pin for native discovery
+        if: runner.os == 'Windows'
+        id: native-shell
+        shell: pwsh
+        run: |
+          $lock = Get-Content shared-shell.lock.json -Raw | ConvertFrom-Json
+          if ($lock.repository -ne 'https://github.com/trelio-ru/agent-workspaces.git' -or $lock.revision -notmatch '^[a-f0-9]{40}$') { throw 'Invalid shared shell pin' }
+          "revision=$($lock.revision)" >> $env:GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+        if: runner.os == 'Windows'
+        with:
+          repository: trelio-ru/agent-workspaces
+          ref: ${{ steps.native-shell.outputs.revision }}
+          path: _shared-shell
+          persist-credentials: false
+      - name: Native Windows Codex discovers the built plugin hooks without trusting them
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TRELIO_TEST_SHARED_SHELL: ${{ github.workspace }}/_shared-shell
+        run: ./.github/scripts/native-hook-discovery.ps1
 
   verified-source:
     name: Verify exact source package gates
