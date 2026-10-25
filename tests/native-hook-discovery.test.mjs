@@ -14,7 +14,10 @@ test('native Codex discovers the three untrusted hooks of the built package',{
   skip:!process.env.TRELIO_TEST_CODEX_CLI||!process.env.TRELIO_TEST_SHARED_SHELL,
 },async t=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'assistant-native-hooks-'));
-  t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  // Windows may retain a just-closed native SQLite/directory handle briefly
+  // after process exit. Retry only removal of this owned fixture, with a fixed
+  // bound; discovery, installation and native requests are never repeated.
+  t.after(()=>fs.rm(root,{recursive:true,force:true,maxRetries:20,retryDelay:100}));
   const market=path.join(root,'market'),home=path.join(root,'home');
   await fs.mkdir(path.join(market,'.agents/plugins'),{recursive:true});await fs.mkdir(home);
   await buildPlugin({shellRepository:process.env.TRELIO_TEST_SHARED_SHELL,outputDirectory:path.join(market,'plugin')});
@@ -29,6 +32,9 @@ test('native Codex discovers the three untrusted hooks of the built package',{
     assert.equal(result.error,undefined,'native fixture setup failed');assert.equal(result.status,0,'native fixture setup refused');
   }
   const child=spawn(exe,['app-server','--listen','stdio://'],{env,cwd:home,windowsHide:true,shell:false,stdio:['pipe','pipe','ignore']});
+  // `exit` precedes closure of the child's stdio handles. Keep the close promise
+  // from spawn time, so cleanup cannot race their release on Windows.
+  const closed=new Promise(resolve=>child.once('close',resolve));
   const waiting=new Map();let pending='',bytes=0,next=1;
   const failure=()=>{for(const call of waiting.values())call.reject(Error('Native hook inventory unavailable'));waiting.clear();child.kill();};
   const request=(method,params)=>new Promise((resolve,reject)=>{const id=next++;waiting.set(id,{resolve,reject});child.stdin.write(JSON.stringify({id,method,params})+'\n');});
@@ -53,5 +59,6 @@ test('native Codex discovers the three untrusted hooks of the built package',{
     // hook. The real Windows business pass remains a separate acceptance step.
     const config=await fs.readFile(path.join(home,'config.toml'),'utf8');
     assert.doesNotMatch(config,/trusted_hash/);
-  }finally{clearTimeout(timer);child.kill();await new Promise(resolve=>child.exitCode===null&&child.signalCode===null?child.once('exit',resolve):resolve());}
+    t.diagnostic('Native hooks/list verified three untrusted hooks; fixture cleanup follows');
+  }finally{clearTimeout(timer);child.kill();await closed;}
 });
