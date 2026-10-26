@@ -56,7 +56,7 @@ Remote MCP reference uses SAME live native resolver/credential store/doctor/call
 Private-credential reference использует live sealed owner intent и общий host;
 encrypted neutral metadata не экспортирует company content; empty-card approval
 не разрешает generation/signup, values не входят в state.
-Task reference covers exact conversation binding, signed account login and
+Task reference keeps nonexclusive conversation correlation and exact per-original batch routes, signed account login and
 corporate Secret creation through the SAME host/owner ledger, not new executors.
 First-send hints never permit send replay or replace a native route receipt.
 Marketplace main ссылается только на self-contained generated `plugin-vX.Y.Z`,

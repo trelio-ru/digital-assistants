@@ -98,28 +98,25 @@ replies without native thread headers may require a separate routing decision.
 Before sending, load the exact company skill and its published sending policy.
 Record the recipient, task purpose and original send intent. After a confirmed
 send, retain its exact provider conversation reference and native selected
-source. Bind that conversation to this task through the live
-`bind_assistant_source_conversation` contract using the provider's opaque
-conversation key, current source revision and task snapshot. Read back its route
-receipt. Never derive the key from a display name, invent a hash or silently move
-another task's conversation. An unknown send requires result reconciliation
-before either sending again or claiming a route.
+source. Optionally record that conversation through the live
+`bind_assistant_source_conversation` contract as correlation history, using the
+provider's opaque key and current source/task snapshot. It does not reserve the
+conversation for this task or route future replies automatically. Never derive
+keys from display names or invent hashes. Unknown sends require reconciliation
+before either another send or a positive correlation claim.
 
-For an incoming batch explicitly marked `intakeKind:"route_existing"` in the
-live native work context, bind its exact selected source/key to this existing
-task once the permanent task chat/pass is confirmed, before material completion.
-Retain the route receipt so later replies do not need repeated classification.
-That presentation hint grants no body-read, processing or ACK permission.
-`owner_command` intake and a shared chat carrying new assignments must NOT be
-bound wholesale to one of the created tasks; its commands retain per-event routes.
+Incoming source references cover only the original messages selected by the
+native batch classification, including when `intakeKind:"route_existing"` is
+present. Read and handle those exact originals in the current task pass; do not
+bind the whole chat as a prerequisite for completing material work. The same
+conversation may discuss several tasks, and later batches require independent
+classification. Shared owner-command conversations also retain per-event routes.
 
-A route permits event delivery; it does not prove body read, processing, sender
-identity or read-state acknowledgement. If the installed provider/runtime cannot
-supply the exact source/key or native binding is unavailable, record that
-specific blocker and keep a justified recurring check. Do not claim event wake
-is configured merely because the message was sent. Unknown conversations remain
-unrouted until a permitted exact binding or verified owner intake resolves them;
-never disclose their bodies to a guessed company/task.
+A correlation receipt proves neither message reading, processing, sender identity
+nor ACK permission. Missing correlation metadata does not invalidate an existing
+per-original route. If actual message reading or native routing is unavailable,
+record the specific blocker and keep a justified recurring check; sending alone
+never proves delivery of a future reply.
 
 On wake, read the exact delivered body/revision through the signed skill, save
 the relevant result in accepted material and select only the original slots

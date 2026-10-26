@@ -88,14 +88,13 @@ provider или второй executable: всё выполняет общий si
 Corporate cards and signed local account login use those same engines with
 independent exact owner intents. A login handoff is not verified login; a consumed
 attempt receipt never reopens input. Before waiting on correspondence, the worker
-binds its exact provider conversation to the current native source/task and reads
-back the route receipt. Missing binding remains a concrete blocker with a cycle,
-not a claim that event wake or message ACK is configured.
-Explicit first-send conversation references use that SAME provider/account scope;
-an unavailable hint never causes a second send or grants task routing authority.
-Inbound existing-task triage binds only its explicitly marked exact selected
-conversation after a genuine permanent task pass. Owner-command shared intake
-keeps per-event routes and is never captured by one newly created task.
+may retain native conversation correlation history after a confirmed send.
+This history is nonexclusive and never assigns future incoming messages to one
+task. Every incoming conversation batch is classified once into exact original
+message groups; different groups may target different accepted tasks. A task
+worker handles only its selected originals and needs no whole-chat bind before
+material completion. Provider read, committed material and ACK remain independent.
+First-send hints never permit send replay or replace per-original route receipts.
 Нет human approval flags/OAuth, импорта corporate values или разрешения signup
 по созданию карточки. Отсутствующая capability остаётся конкретным blocker.
 
