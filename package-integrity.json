@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "plugin": "trelio-digital-assistant",
+  "version": "0.1.6",
+  "sharedShell": {
+    "schemaVersion": 1,
+    "repository": "https://github.com/trelio-ru/agent-workspaces.git",
+    "revision": "a1d3400b3b27bb74d5e447755af0817ae3838f6c",
+    "directory": "plugins/trelio-agent-workspaces/scripts",
+    "componentVersion": "3.2.3"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": 420,
+      "size": 1783,
+      "sha256": "50463d3a57440318c2494e46e40654a749f2ce9105a5193e7d43eb73ad24ee93"
+    },
+    {
+      "path": ".gitattributes",
+      "mode": 420,
+      "size": 8,
+      "sha256": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da"
+    },
+    {
+      "path": "assets/trelio-assistant-composer-icon.svg",
+      "mode": 420,
+      "size": 857,
+      "sha256": "5ac482e8f94eb27a5136dd181d56e8c39f44ff0635e0b72ef452939ebcdc1ebf"
+    },
+    {
+      "path": "assets/trelio-assistant-logo-dark.svg",
+      "mode": 420,
+      "size": 742,
+      "sha256": "c39a3020148296c78fccf4c8c9262e1ae174209a8dcdda6cb2319752a4007206"
+    },
+    {
+      "path": "assets/trelio-assistant-logo.svg",
+      "mode": 420,
+      "size": 850,
+      "sha256": "fbf526b22fb2324623e64aaa89fa5474d8d4cd6b4bb64c3255d22cdd1263131e"
+    },
+    {
+      "path": "scripts/launch-trelio-node",
+      "mode": 493,
+      "size": 2935,
+      "sha256": "045b5d54fa265a1e75ef011f771bf3bb77b058e50b1ce64d84353c0c40e741db"
+    },
+    {
+      "path": "scripts/launch-trelio-node.cmd",
+      "mode": 420,
+      "size": 3196,
+      "sha256": "dc2d254b2f418ee13c8bd8287970418ee1c5541b46d3e5407880b7062d03c5c1"
+    },
+    {
+      "path": "scripts/resolve-node.ps1",
+      "mode": 420,
+      "size": 4696,
+      "sha256": "84d25ed28693fbd0af99293111703430f666e534925710d2d5e3bb23c2e6b029"
+    },
+    {
+      "path": "scripts/trelio-host-runtime-download.mjs",
+      "mode": 420,
+      "size": 4876,
+      "sha256": "daf9fe77e6f9699755db24ec5d2a1189c36510c9ba20228ad36bf13e2fd4170b"
+    },
+    {
+      "path": "scripts/trelio-host-runtime-loader.mjs",
+      "mode": 420,
+      "size": 26081,
+      "sha256": "088333d64c2f038626adcf2cb599ea3fab1b287cd620ebfd0a8edfff2657f706"
+    },
+    {
+      "path": "scripts/trelio-host-runtime-shell.mjs",
+      "mode": 420,
+      "size": 8316,
+      "sha256": "ac39c227c212c33f9463305c7d952c3925936640e1be25a784bae1a39561dbd6"
+    },
+    {
+      "path": "scripts/trelio-mcp-startup-budget.mjs",
+      "mode": 420,
+      "size": 2960,
+      "sha256": "87adf5cfef5772861673ec533c55b25b0137662b01eda23e08a211147248e974"
+    },
+    {
+      "path": "skills/assistant-setup/SKILL.md",
+      "mode": 420,
+      "size": 4187,
+      "sha256": "1f883d2eb21a979e6bb6013fe170cab63913921409ac38cf89bd80d5f018aee3"
+    },
+    {
+      "path": "skills/assistant-task-worker/SKILL.md",
+      "mode": 420,
+      "size": 5049,
+      "sha256": "756dd0996ffbee2253d15f22ca76bd160181eb7e788865aa434eccd1da632b17"
+    },
+    {
+      "path": "skills/assistant-task-worker/references/work-state.md",
+      "mode": 420,
+      "size": 19283,
+      "sha256": "6e44996850ff2232a460f222d6a9dd33437bf49d30e8a27d8bf87b605361a7bf"
+    }
+  ],
+  "hookComponent": {
+    "pluginId": "trelio-digital-assistant-hooks@trelio-digital-assistants",
+    "version": "0.1.0",
+    "integritySha256": "a04dfe03d55bd7376133441bb478f0e50178649fccc1c48441582f7d01fcd522"
+  }
+}
