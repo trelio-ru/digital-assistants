@@ -66,6 +66,7 @@ Marketplace main ссылается только на self-contained generated `
 не на неполную source-папку. С 0.1.5 main bundle не владеет hooks. `hooks-vX.Y.Z`
 публикуется тем же native builder и фиксируется `hook-component.lock.json`;
 следующий main release проверяет исходные bytes/provenance без новой публикации.
+Lock берётся из проверенного публичного release receipt, никогда из VM cache.
 Hook version/pin меняются только вместе с реальным hook/loader изменением.
 `hook-shell.lock.json` независим от main `shared-shell.lock.json`; release impact
 общей оболочки проверяется для обоих, metadata-only pin bump hooks запрещён.
