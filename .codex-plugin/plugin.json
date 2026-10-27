@@ -1,0 +1,42 @@
+{
+  "name": "trelio-digital-assistant",
+  "version": "0.1.7",
+  "description": "Цифровой ассистент Trelio: привязка к владельцу, работа по задачам и регулярные проверки в общем runtime.",
+  "author": {
+    "name": "Trelio",
+    "url": "https://trelio.ru"
+  },
+  "repository": "https://github.com/trelio-ru/digital-assistants",
+  "skills": "./skills/",
+  "onboardingSkill": "./skills/assistant-setup/SKILL.md",
+  "interface": {
+    "displayName": "Цифровой ассистент Trelio",
+    "shortDescription": "Работа по поручениям владельца в Trelio",
+    "longDescription": "Привязывает компьютер цифрового ассистента без входа владельца в Trelio на этом компьютере. Использует общие правила, навыки и рабочие пространства, отдельный чат каждой задачи и регулярные проверки в runtime.",
+    "developerName": "Trelio",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://trelio.ru",
+    "composerIcon": "./assets/trelio-assistant-composer-icon.svg",
+    "logo": "./assets/trelio-assistant-logo.svg",
+    "logoDark": "./assets/trelio-assistant-logo-dark.svg",
+    "defaultPrompt": [
+      "Настрой этот компьютер цифрового ассистента Trelio."
+    ]
+  },
+  "mcpServers": {
+    "trelio-assistant": {
+      "command": "./scripts/launch-trelio-node",
+      "args": [
+        "./scripts/trelio-host-runtime-loader.mjs",
+        "bridge",
+        "assistant",
+        "mcp"
+      ],
+      "cwd": "."
+    }
+  }
+}
