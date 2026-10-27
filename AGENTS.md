@@ -67,11 +67,15 @@ Marketplace main ссылается только на self-contained generated `
 публикуется тем же native builder и фиксируется `hook-component.lock.json`;
 следующий main release проверяет исходные bytes/provenance без новой публикации.
 Lock берётся из проверенного публичного release receipt, никогда из VM cache.
-Hook version/pin меняются только вместе с реальным hook/loader изменением.
+Hook version/pin меняются только при изменении executable bytes или native source
+contract; metadata-only bumps запрещены.
 `hook-shell.lock.json` независим от main `shared-shell.lock.json`; release impact
 общей оболочки проверяется для обоих, metadata-only pin bump hooks запрещён.
 Первый переход требует личного одобрения нового компонента; будущие main-only
-обновления сохраняют native hashes. Проверять реальным isolated hooks/list: main
+обновления сохраняют native hashes. С 0.1.1 hook ref содержит payload в plugin/,
+marketplace использует exact git-subdir ./plugin; installed root не содержит .git.
+Native Codex хэширует и checkout metadata старого URL-root 0.1.0: не удалять её
+ради trust и не менять старые tags. Проверять реальным isolated hooks/list: main
 update – прежние hashes, hook/loader change – новые, без fixture trust writes. Source tag `vX.Y.Z` после exact 3-OS CI использует
 тот же builder/pin и существующий workflow; generated ref не запускает новый
 release. Native Git создаёт immutable ref один раз и делает exact read-back;

@@ -49,7 +49,7 @@ Agent Plugins даже при наличии hooks.json; это не повод 
 inventory не остаётся. Ни второй MCP server, ни новый executor не появляются.
 
 Native Windows gate использует официальный `rust-v0.164.0` и pinned hashes,
-изолированные HOME/USERPROFILE/CODEX_HOME и local fixture marketplace. Он
+изолированные HOME/USERPROFILE/CODEX_HOME и synthetic Git fixture marketplace. Он
 проверяет три `untrusted` hooks без входа, model turn, Trelio MCP или trust writes.
 Main version/instruction update обязан сохранять реальные `currentHash`; изменение
 hook или loader bytes обязано менять их. Запись trusted_hash/approval migration
@@ -140,17 +140,17 @@ Source → очередь → тот же native chat → business receipt → �
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.7`. В этом ref
+Git source `url` этого же repository с immutable ref `plugin-v0.1.8`. В этом ref
 native `.codex-plugin/plugin.json` находится рядом с готовыми skills/MCP и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.7` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.8` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
 После exact successful source package gate на Linux/macOS/Windows оператор
-создаёт source tag `v0.1.7` и отправляет его guarded
-`npm run git:push-main -- --tag v0.1.7`. Штатный `plugin-tests.yml` для tag:
+создаёт source tag `v0.1.8` и отправляет его guarded
+`npm run git:push-main -- --tag v0.1.8`. Штатный `plugin-tests.yml` для tag:
 
 1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
    package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
@@ -165,12 +165,12 @@ Generated `.gitattributes` сохраняет exact payload bytes также п�
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
 4. Сначала публикует или проверяет exact hook dependency, затем создаёт
-   `refs/tags/plugin-v0.1.7` одним native push и перечитывает
+   `refs/tags/plugin-v0.1.8` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.7` commit,
+После workflow read-back обязан подтвердить remote `plugin-v0.1.8` commit,
 `.codex-plugin/plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
 launchers в clone этого ref, а также отдельный immutable hook ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
@@ -179,7 +179,7 @@ launchers в clone этого ref, а также отдельный immutable ho
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.7`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.8`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
@@ -195,7 +195,8 @@ runtime/DB/crypto checks do not assert Windows pilot or business readiness.
 ## Независимый hook-компонент
 
 Codex 0.164 вычисляет `plugin_content_hash` по всему hook-owning bundle, включая
-metadata и Markdown, и проверяет `trusted_content_hash` при исполнении. Простое
+metadata, Markdown и служебный Git index/reflog root checkout, и проверяет
+`trusted_content_hash` при исполнении. Простое
 сохранение hooks.json при bump основного manifest поэтому не сохраняет trust.
 Причина проверена в native `hooks/list`, а не выведена из Windows/CLI интерфейса.
 
@@ -211,7 +212,8 @@ metadata. В нём нет main version, skills/MCP, контекста, credent
 После публикации structural receipt hook release фиксируется в tracked
 `hook-component.lock.json`. Следующий main release сверяет полный component tree,
 исходный tag/commit, provenance и remote ref; совпавший hook ref не пересоздаётся
-и не получает новую фиктивную provenance. Изменение компонента требует отдельной
+и не получает новую фиктивную provenance. Изменение executable bytes или native
+source contract компонента требует отдельной
 версии/публикации и native human review. Не делайте metadata-only bump hook версии.
 
 Runtime использует третий закрытый профиль SAME immutable-tree/retention/native
@@ -231,3 +233,15 @@ bytes, untrusted/modified native statuses блокируют запуск. Codex
 bypass flags, symlink indirection или размещения меняющихся файлов в исключениях
 fingerprint scanner. Одобрение нового компонента при первой миграции – реальное
 изменение hook identity; после него main-only updates не требуют нового review.
+
+
+Hook source с 0.1.1 использует официальный `git-subdir` с fixed `./plugin` и
+immutable `hooks-vX.Y.Z`. Generated transport tree содержит полный payload внутри
+`plugin/` и root `.gitattributes` для byte-exact Windows checkout. Installed
+inventory описывает прежние относительные paths, а native Codex помещает только
+выбранный payload в свой обычный versioned cache, без `.git`. Это штатная source
+projection, а не удаление metadata из установленного cache. Старый URL-root
+`hooks-v0.1.0` сохраняется и проверяется в исходном формате для migration.
+Native gate использует main URL refs и fixed hook subdirectory из одного Git
+репозитория: установка и обновление main сохраняют native hashes; изменение
+hook/loader их меняет. Никакие fixture approvals/trusted hashes не записываются.

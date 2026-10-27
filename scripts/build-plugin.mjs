@@ -250,9 +250,16 @@ function distributionSource(repository, sourceCommit, version, kind='assistant')
   const entries = marketplace.plugins?.filter(entry => entry.name === name);
   const ref=kind==='hooks'?`hooks-v${version}`:`plugin-v${version}`;
   const distributionRef = `refs/tags/${ref}`;
+  // Codex fingerprints checkout metadata when a Git-URL plugin occupies the
+  // repository root. A native git-subdir projection installs ONLY this fixed
+  // immutable payload, with .git remaining outside the hook-owning bundle.
+  // Legacy 0.1.0 is read/verified in its original format; never rewrite its tag.
+  const subdirectory = kind === 'hooks' && version !== '0.1.0';
   if (marketplace.name !== 'trelio-digital-assistants' || entries?.length !== 1
-    || !entries[0].source || Object.keys(entries[0].source).sort().join(',') !== 'ref,source,url'
-    || entries[0].source.source !== 'url' || entries[0].source.url !== DISTRIBUTION_REPOSITORY
+    || !entries[0].source || Object.keys(entries[0].source).sort().join(',') !== (subdirectory?'path,ref,source,url':'ref,source,url')
+    || entries[0].source.source !== (subdirectory?'git-subdir':'url')
+    || subdirectory && entries[0].source.path !== './plugin'
+    || entries[0].source.url !== DISTRIBUTION_REPOSITORY
     || entries[0].source.ref !== ref)
     fail('Marketplace must select the exact installable Git release');
   const files = new Map((kind==='hooks'?HOOK_SOURCE_FILES:SOURCE_FILES).map(file => [file, {
@@ -275,7 +282,14 @@ function expectedDistribution(repository, shellRepository, sourceCommit, version
   }
   const integrity = pluginIntegrity(source.files, source.lock, descriptor);
   source.files.set('package-integrity.json', integrityFile(integrity));
-  return { ...source, integrity };
+  // The builder output/inventory still describes the installed package root.
+  // Only its immutable Git transport tree gains the reviewed wrapper. Keep a
+  // root attributes file too so Windows Git cannot rewrite nested payloads.
+  // This is native materialization, not post-install cache pruning/exclusions.
+  const treeFiles = kind === 'hooks' && version !== '0.1.0'
+    ? new Map([['.gitattributes',source.files.get('.gitattributes')],
+      ...[...source.files].map(([name,entry])=>[`plugin/${name}`,entry])]) : source.files;
+  return { ...source, integrity, treeFiles };
 }
 
 function writeDistributionTree(repository, files) {
@@ -326,7 +340,7 @@ export async function preparePluginDistribution({ sourceRepository = ROOT, shell
   // Repeat the source check after asynchronous file I/O. A moved or modified
   // source cannot lend its release identity to an already prepared payload.
   distributionSource(sourceRepository,sourceCommit,version,kind);
-  const tree = writeDistributionTree(sourceRepository, expected.files);
+  const tree = writeDistributionTree(sourceRepository, expected.treeFiles);
   const integritySha256 = sha256(expected.files.get('package-integrity.json').bytes);
   const commit = writeDistributionCommit(sourceRepository,{tree,sourceCommit,version,sharedShellRevision:expected.lock.revision,integritySha256,sourceTag:expected.sourceTag},kind);
   return {schemaVersion:1,version,sourceCommit,sourceTag:expected.sourceTag,distributionRef:expected.distributionRef,
@@ -347,7 +361,7 @@ export async function publishPluginDistribution({ sourceRepository = ROOT, shell
   if (prepared.sourceTag !== expected.sourceTag || prepared.distributionRef !== expected.distributionRef
     || prepared.sharedShellRevision !== expected.lock.revision || prepared.integritySha256 !== sha256(expected.files.get('package-integrity.json').bytes)
     || gitScalar(sourceRepository,['rev-parse',`${prepared.distributionCommit}^{tree}`]) !== prepared.tree
-    || writeDistributionTree(sourceRepository,expected.files) !== prepared.tree
+    || writeDistributionTree(sourceRepository,expected.treeFiles) !== prepared.tree
     // Also pin orphan parents, metadata and public provenance. Matching files
     // alone must not publish a caller-supplied commit/history under this name.
     || writeDistributionCommit(sourceRepository,prepared,kind) !== prepared.distributionCommit) fail('Prepared distribution no longer matches its exact source');
@@ -407,7 +421,7 @@ function verifyLockedHookDependency({sourceRepository,shellRepository,sourceComm
   if(gitScalar(sourceRepository,['rev-parse',`${lock.sourceTag}^{commit}`])!==lock.sourceCommit)
     fail('Hook source tag differs from its locked source');
   const expected=expectedDistribution(sourceRepository,shellRepository,sourceCommit,lock.version,'hooks');
-  if(writeDistributionTree(sourceRepository,expected.files)!==lock.tree
+  if(writeDistributionTree(sourceRepository,expected.treeFiles)!==lock.tree
     ||sha256(expected.files.get('package-integrity.json').bytes)!==lock.integritySha256
     ||expected.lock.revision!==lock.sharedShellRevision
     ||writeDistributionCommit(sourceRepository,lock,'hooks')!==lock.distributionCommit

@@ -9,7 +9,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/trelio-ru/digital-assistants.git",
-        "ref": "plugin-v0.1.7"
+        "ref": "plugin-v0.1.8"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -20,9 +20,10 @@
     {
       "name": "trelio-digital-assistant-hooks",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/trelio-ru/digital-assistants.git",
-        "ref": "hooks-v0.1.0"
+        "path": "./plugin",
+        "ref": "hooks-v0.1.1"
       },
       "policy": {
         "installation": "AVAILABLE",

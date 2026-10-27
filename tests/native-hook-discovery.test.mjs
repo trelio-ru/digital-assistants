@@ -4,7 +4,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {spawn,spawnSync} from 'node:child_process';
-import {buildPlugin,buildHookPlugin} from '../scripts/build-plugin.mjs';
+import {pathToFileURL} from 'node:url';
+import {buildHookPlugin} from '../scripts/build-plugin.mjs';
 
 
 // Explicit native executable + exact read-only shared shell checkout. Never
@@ -20,13 +21,38 @@ test('native Codex keeps hook hashes across main updates and detects executable 
   t.after(()=>fs.rm(root,{recursive:true,force:true,maxRetries:20,retryDelay:100}));
   const market=path.join(root,'market'),home=path.join(root,'home');
   await fs.mkdir(path.join(market,'.agents/plugins'),{recursive:true});await fs.mkdir(home);
-  await buildPlugin({shellRepository:process.env.TRELIO_TEST_SHARED_SHELL,outputDirectory:path.join(market,'plugin')});
-  await buildHookPlugin({shellRepository:process.env.TRELIO_TEST_SHARED_SHELL,outputDirectory:path.join(market,'hook-plugin')});
-  await fs.writeFile(path.join(market,'.agents/plugins/marketplace.json'),JSON.stringify({name:'assistant-discovery-fixture',
-    plugins:[{name:'trelio-digital-assistant',source:{source:'local',path:'./plugin'}},{name:'trelio-digital-assistant-hooks',source:{source:'local',path:'./hook-plugin'}}]}));
+  // Use the SAME real Git repository for main URL refs and the fixed hook
+  // subdirectory ref. Local-source fixtures miss Codex's checkout-index writes
+  // during main installation and falsely certify stable native fingerprints.
+  const repository=path.join(root,'repository');await fs.mkdir(path.join(repository,'.codex-plugin'),{recursive:true});
+  await buildHookPlugin({shellRepository:process.env.TRELIO_TEST_SHARED_SHELL,outputDirectory:path.join(repository,'plugin')});
+  const mainManifest=path.join(repository,'.codex-plugin/plugin.json');
+  await fs.writeFile(mainManifest,JSON.stringify({name:'trelio-digital-assistant',version:'0.1.0'}));
+  await fs.writeFile(path.join(repository,'README.md'),'Synthetic main instructions one\n');
+  await fs.writeFile(path.join(repository,'.gitattributes'),'* -text\n');
   const env=Object.fromEntries(['PATH','SystemRoot','WINDIR','ComSpec','PATHEXT','TEMP','TMP'].filter(k=>process.env[k]).map(k=>[k,process.env[k]]));
   Object.assign(env,{HOME:home,USERPROFILE:home,CODEX_HOME:home,LOCALAPPDATA:path.join(home,'local'),APPDATA:path.join(home,'roaming'),
     XDG_CONFIG_HOME:path.join(home,'config'),XDG_CACHE_HOME:path.join(home,'cache')});
+  // A real empty config file is required on Windows; os.devNull maps to a
+  // device path Git cannot read as its global configuration. Never borrow a
+  // maintainer identity, credential helper or executable Git hook.
+  const gitConfig=path.join(root,'git-config'),gitHooks=path.join(root,'git-hooks');
+  await fs.writeFile(gitConfig,'');await fs.mkdir(gitHooks);
+  Object.assign(env,{GIT_CONFIG_GLOBAL:gitConfig,GIT_CONFIG_NOSYSTEM:'1',GIT_TERMINAL_PROMPT:'0'});
+  const git=args=>{
+    const result=spawnSync('git',['-c',`core.hooksPath=${gitHooks}`,...args],{env,cwd:repository,timeout:30_000,maxBuffer:1024*1024,windowsHide:true});
+    assert.equal(result.error,undefined,'synthetic Git setup failed');assert.equal(result.status,0,'synthetic Git setup refused');
+  };
+  const commit=message=>{git(['add','.']);git(['-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm',message]);};
+  git(['init','-q']);commit('First main and fixed hook payload');git(['tag','main-one']);git(['tag','fixed-hooks']);
+  await fs.writeFile(mainManifest,JSON.stringify({name:'trelio-digital-assistant',version:'0.1.1'}));
+  await fs.appendFile(path.join(repository,'README.md'),'Synthetic changed main instructions\n');
+  commit('Second main only');git(['tag','main-two']);
+  const catalogue={name:'assistant-discovery-fixture',plugins:[
+    {name:'trelio-digital-assistant',source:{source:'url',url:pathToFileURL(repository).href,ref:'main-one'}},
+    {name:'trelio-digital-assistant-hooks',source:{source:'git-subdir',url:pathToFileURL(repository).href,path:'./plugin',ref:'fixed-hooks'}}]};
+  const catalogueFile=path.join(market,'.agents/plugins/marketplace.json');
+  await fs.writeFile(catalogueFile,JSON.stringify(catalogue));
   const exe=process.env.TRELIO_TEST_CODEX_CLI;
   const native=args=>{
     const result=spawnSync(exe,args,{env,cwd:home,timeout:30_000,maxBuffer:1024*1024,windowsHide:true});
@@ -35,7 +61,11 @@ test('native Codex keeps hook hashes across main updates and detects executable 
   };
   native(['plugin','marketplace','add',market,'--json']);
   const install=name=>native(['plugin','add',`${name}@assistant-discovery-fixture`,'--json']);
-  install('trelio-digital-assistant');const installedHooks=install('trelio-digital-assistant-hooks');
+  const installedHooks=install('trelio-digital-assistant-hooks');
+  const component=JSON.parse(await fs.readFile(path.join(repository,'plugin','.codex-plugin/plugin.json'),'utf8'));
+  assert.equal(path.resolve(installedHooks.installedPath),path.join(home,'plugins','cache','assistant-discovery-fixture','trelio-digital-assistant-hooks',component.version),
+    'native git-subdir must preserve the exact versioned installation layout');
+  await assert.rejects(fs.lstat(path.join(installedHooks.installedPath,'.git')),{code:'ENOENT'});
   const readHooks=async()=>{
   const child=spawn(exe,['app-server','--listen','stdio://'],{env,cwd:home,windowsHide:true,shell:false,stdio:['pipe','pipe','ignore']});
   // `exit` precedes closure of the child's stdio handles. Keep the close promise
@@ -66,12 +96,12 @@ test('native Codex keeps hook hashes across main updates and detects executable 
   }finally{clearTimeout(timer);child.kill();await closed;}
   };
   const original=await readHooks();
-  const manifest=path.join(market,'plugin','.codex-plugin','plugin.json');
-  const changed=JSON.parse(await fs.readFile(manifest,'utf8'));changed.version='0.1.8';
-  await fs.writeFile(manifest,JSON.stringify(changed));
-  await fs.appendFile(path.join(market,'plugin','skills','assistant-task-worker','SKILL.md'),'\nSynthetic changed non-hook instructions\n');
   install('trelio-digital-assistant');
-  assert.deepEqual(await readHooks(),original,'main version and instructions must NOT change native hook trust hashes');
+  assert.deepEqual(await readHooks(),original,'installing main from the SAME Git URL cannot alter hook hashes');
+  catalogue.plugins[0].source.ref='main-two';await fs.writeFile(catalogueFile,JSON.stringify(catalogue));
+  install('trelio-digital-assistant');
+  assert.deepEqual(await readHooks(),original,'updating main version/ref/instructions must NOT change native hook trust hashes');
+  await assert.rejects(fs.lstat(path.join(installedHooks.installedPath,'.git')),{code:'ENOENT'});
   // Mutate ONLY the isolated installed fixture. No trust record is written:
   // compare the real Codex hashes which a genuine approval is bound to.
   const hookFile=path.join(installedHooks.installedPath,'hooks','hooks.json');
