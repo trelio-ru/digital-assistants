@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.1",
+  "sourceCommit": "b80e80a9a636c564dcf7a7ffe3995c96eefb8abe",
+  "sourceTag": "v0.1.8",
+  "distributionRef": "refs/tags/hooks-v0.1.1",
+  "distributionCommit": "dce7a7ab37cc7bbfe22cd5549aaa0a2e75d30c74",
+  "tree": "7b064e7e1fc321c693e38c4090ec796c60a7dbf7",
+  "sharedShellRevision": "a1d3400b3b27bb74d5e447755af0817ae3838f6c",
+  "integritySha256": "6aceece3639d4e095a06f5e388e2200f29a1509085e3b2e1ab8f2f70e820a68b"
+}
