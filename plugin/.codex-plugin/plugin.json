@@ -1,0 +1,11 @@
+{
+  "name": "trelio-digital-assistant-hooks",
+  "version": "0.1.1",
+  "description": "Стабильные lifecycle hooks цифрового ассистента Trelio. Изменения требуют личного одобрения в Codex.",
+  "author": {
+    "name": "Trelio",
+    "url": "https://trelio.ru"
+  },
+  "repository": "https://github.com/trelio-ru/digital-assistants",
+  "hooks": "./hooks/hooks.json"
+}
