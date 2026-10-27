@@ -202,6 +202,15 @@ async function distributionFixture(t,{legacyHooks=false}={}) {
   await fs.copyFile(f.lockPath,path.join(sourceRepository,'hook-shell.lock.json'));
   await fs.mkdir(path.join(sourceRepository,'.agents/plugins'),{recursive:true});
   await fs.copyFile(path.join(ROOT,'.agents/plugins/marketplace.json'),path.join(sourceRepository,'.agents/plugins/marketplace.json'));
+  // This isolated release protocol fixture has its own stable versions/tags.
+  // A production patch bump must not change its already-pinned initial source
+  // while the next-release test independently derives a later fixture version.
+  const fixtureManifest=path.join(sourceRepository,'plugins/trelio-digital-assistant/plugin.json');
+  const fixtureMetadata=JSON.parse(await fs.readFile(fixtureManifest));fixtureMetadata.version='0.1.10';
+  await fs.writeFile(fixtureManifest,JSON.stringify(fixtureMetadata));
+  const fixtureMarket=path.join(sourceRepository,'.agents/plugins/marketplace.json');
+  const fixtureCatalog=JSON.parse(await fs.readFile(fixtureMarket));fixtureCatalog.plugins[0].source.ref='plugin-v0.1.10';
+  await fs.writeFile(fixtureMarket,JSON.stringify(fixtureCatalog));
   // Historical immutable tags retain their URL-root format. This fixture is
   // source-controlled test data only; production never rewrites an old tag.
   if(legacyHooks){
@@ -318,8 +327,9 @@ test('failed or noisy remote metadata never turns into a missing installable tag
 
 test('marketplace and tagged workflow publish an existing builder Git source after exact three-OS evidence',async()=>{
   const marketplace=JSON.parse(await fs.readFile(path.join(ROOT,'.agents/plugins/marketplace.json')));
+  const currentManifest=JSON.parse(await fs.readFile(path.join(SOURCE,'plugin.json')));
   assert.equal(marketplace.name,'trelio-digital-assistants');assert.equal(marketplace.plugins.length,2);
-  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:'plugin-v0.1.10'});
+  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:`plugin-v${currentManifest.version}`});
   assert.deepEqual(marketplace.plugins[1].source,{source:'git-subdir',url:'https://github.com/trelio-ru/digital-assistants.git',path:'./plugin',ref:'hooks-v0.1.1'});
   assert.deepEqual(marketplace.plugins[0].policy,{installation:'AVAILABLE',authentication:'ON_INSTALL'});
   const workflow=await fs.readFile(path.join(ROOT,'.github/workflows/plugin-tests.yml'),'utf8');

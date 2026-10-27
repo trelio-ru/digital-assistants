@@ -56,11 +56,12 @@ Use the exposed paired source-setup tools without an active task. Preserve the
 same reservation/sourceId and preparation clientRequestId; checking status or
 receiving a refusal is no reason to create another connection or task.
 
-After `configure_assistant_telegram_source` returns `session_authorized`, report
-the exact successful source as **Telegram · <last eight characters of sourceId>**.
-Do not guess among several rows or make the owner find an internal UUID. For
-current source states use the exposed `prepare_assistant_source_account` with
-the same companyId and sourceId:null; this lists refs without opening messages.
+After `configure_assistant_telegram_source` returns `session_authorized`, show
+its `sourceLabel` as a `settingsUrl` link to the exact owner UI row. If absent on
+an older runtime, use **Telegram · <last eight characters of sourceId>** and the
+profile below. Never guess rows or ask for internal UUIDs. Read states through
+`prepare_assistant_source_account` with the same companyId and sourceId:null;
+its refs include labels/links without opening messages.
 
 For state `available`, give this next step: on the owner's device, open
 [Trelio profile](https://trelio.ru/profile/#account-assistants) → this assistant →

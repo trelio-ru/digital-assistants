@@ -126,7 +126,9 @@ Tests используют отдельный fixture Git repository: измен
 
 Локальный вход Telegram/email/MAX выполняется в setup-чате без активной задачи.
 После `session_authorized` setup связывает подтверждение с exact sourceId и
-показывает ту же подпись `Telegram · <последние восемь символов>`, что owner UI.
+показывает возвращённый runtime `sourceLabel` со ссылкой `settingsUrl` на точную
+строку owner UI. URL алгоритмически строится из paired assistant ID и exact
+native company/source scope, без поиска UUID пользователем или task-pass.
 Статус существующей регистрации читается штатным source-list, без новой
 резервации или чтения переписки. Для `available` следующий шаг – профиль владельца
 → ассистент → «Источники сообщений» → компания → точная строка →
@@ -150,17 +152,17 @@ Source → очередь → тот же native chat → business receipt → �
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.10`. В этом ref
+Git source `url` этого же repository с immutable ref `plugin-v0.1.11`. В этом ref
 native `.codex-plugin/plugin.json` находится рядом с готовыми skills/MCP и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.10` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.11` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
 После exact successful source package gate на Linux/macOS/Windows оператор
-создаёт source tag `v0.1.10` и отправляет его guarded
-`npm run git:push-main -- --tag v0.1.10`. Штатный `plugin-tests.yml` для tag:
+создаёт source tag `v0.1.11` и отправляет его guarded
+`npm run git:push-main -- --tag v0.1.11`. Штатный `plugin-tests.yml` для tag:
 
 1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
    package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
@@ -175,12 +177,12 @@ Generated `.gitattributes` сохраняет exact payload bytes также п�
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
 4. Сначала публикует или проверяет exact hook dependency, затем создаёт
-   `refs/tags/plugin-v0.1.10` одним native push и перечитывает
+   `refs/tags/plugin-v0.1.11` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.10` commit,
+После workflow read-back обязан подтвердить remote `plugin-v0.1.11` commit,
 `.codex-plugin/plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
 launchers в clone этого ref, а также отдельный immutable hook ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
@@ -189,7 +191,7 @@ launchers в clone этого ref, а также отдельный immutable ho
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.10`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.11`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
