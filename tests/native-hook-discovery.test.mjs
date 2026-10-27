@@ -67,7 +67,7 @@ test('native Codex keeps hook hashes across main updates and detects executable 
   };
   const original=await readHooks();
   const manifest=path.join(market,'plugin','.codex-plugin','plugin.json');
-  const changed=JSON.parse(await fs.readFile(manifest,'utf8'));changed.version='0.1.7';
+  const changed=JSON.parse(await fs.readFile(manifest,'utf8'));changed.version='0.1.8';
   await fs.writeFile(manifest,JSON.stringify(changed));
   await fs.appendFile(path.join(market,'plugin','skills','assistant-task-worker','SKILL.md'),'\nSynthetic changed non-hook instructions\n');
   install('trelio-digital-assistant');
