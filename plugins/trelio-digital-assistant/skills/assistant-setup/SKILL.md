@@ -1,6 +1,6 @@
 ---
 name: assistant-setup
-description: Pair and verify a dedicated Trelio digital-assistant computer and its background supervisor, then distinguish setup receipts from business verification in permanent task chats. Use for assistant setup, not human Trelio OAuth or ordinary company task execution.
+description: Pair and verify a Trelio digital-assistant computer, connect its local Telegram/email/MAX accounts and guide source auto-check activation. Distinguish setup from business verification in permanent task chats; not human Trelio OAuth or ordinary task execution.
 ---
 
 # Set up the assistant computer
@@ -45,10 +45,34 @@ The background runtime checks current company/model policy and task admissions,
 then opens/resumes the permanent chat of an accepted task under its genuine pass
 and observed hook. Actual hook admission is verified there, not by probing task
 tools from setup. Codex sign-in and Hook trust remain human actions. The owner
-configures company permissions, model/effort and external accounts on their own
-device. Reuse existing confirmed settings; a setup catalogue gap does not mean
+configures company permissions and model/effort in Trelio; external-account sign-in
+happens locally on the assistant computer. Reuse existing confirmed settings; a setup catalogue gap does not mean
 they are absent. An existing human connection is not transferable. Keep companies
 and provider identities separate; a username alone proves no messenger identity.
+
+## Local accounts and auto-check activation
+
+Use the exposed paired source-setup tools without an active task. Preserve the
+same reservation/sourceId and preparation clientRequestId; checking status or
+receiving a refusal is no reason to create another connection or task.
+
+After `configure_assistant_telegram_source` returns `session_authorized`, report
+the exact successful source as **Telegram · <last eight characters of sourceId>**.
+Do not guess among several rows or make the owner find an internal UUID. For
+current source states use the exposed `prepare_assistant_source_account` with
+the same companyId and sourceId:null; this lists refs without opening messages.
+
+For state `available`, give this next step: on the owner's device, open
+[Trelio profile](https://trelio.ru/profile/#account-assistants) → this assistant →
+«Источники сообщений» → the company → that exact source →
+«Использовать для автопроверки». Checks run every five minutes after activation;
+login alone does not enable them. If already `active`, report that setting,
+without claiming an actual successful poll. Do not activate other duplicate rows.
+
+Login, source selection and background polling do not require a task. Do not
+probe task-skill history/message-body methods to verify account setup or present
+their task-pass refusal as a prerequisite for enabling auto-checks. Task-specific
+body access, processing and ACK remain independently admitted business work.
 
 When authorized and its prerequisites are configured, verify real business delivery
 through that background runtime: a permitted source event reaches the durable queue, wakes

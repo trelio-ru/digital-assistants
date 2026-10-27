@@ -39,6 +39,9 @@ Typed Workspace flow – `docs/architecture.md`; model не выбирает dir
 Setup skill разделяет paired/live-contact и background receipts от business
 проверки в постоянном task chat. Six-present setup не запускает new-chat/reload/
 reinstall loop ради task tools; task-pass/proof и observed hook даёт runtime.
+Локальный Telegram login не требует task: после session_authorized setup называет
+точный source suffix и owner UI автопроверки, сохраняя reservation; task body/ACK
+не использовать как проверку подключения или повод создать дубли.
 Codex 0.164 пропускает hooks формата root Agent Plugins, хотя видит его MCP/skills.
 Builder генерирует совместимый `.codex-plugin/plugin.json`, как у human plugin,
 из единственного source manifest/MCP; root `plugin.json`/`mcp.json` в artifact
