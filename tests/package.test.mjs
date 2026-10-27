@@ -193,9 +193,9 @@ async function distributionFixture(t) {
   const git=(...args)=>execFileSync('git',['-C',sourceRepository,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q','-b','main');git('config','core.autocrlf','false');git('add','.');
   git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Release source');
-  const sourceCommit=git('rev-parse','HEAD');git('tag','v0.1.3');
+  const sourceCommit=git('rev-parse','HEAD');git('tag','v0.1.4');
   execFileSync('git',['init','-q','--bare',remote],{stdio:['ignore','pipe','pipe']});git('remote','add','origin',remote);
-  const prepare=output=>preparePluginDistribution({sourceRepository,shellRepository:f.repository,outputDirectory:path.join(f.directory,output),sourceCommit,version:'0.1.3'});
+  const prepare=output=>preparePluginDistribution({sourceRepository,shellRepository:f.repository,outputDirectory:path.join(f.directory,output),sourceCommit,version:'0.1.4'});
   const publish=(prepared,runGit)=>publishPluginDistribution({sourceRepository,shellRepository:f.repository,prepared,runGit});
   return {...f,sourceRepository,remote,sourceCommit,git,prepare,publish};
 }
@@ -203,7 +203,7 @@ async function distributionFixture(t) {
 test('installable Git preparation is deterministic, self-contained and pins exact source, shell, bytes and modes',async t=>{
   const f=await distributionFixture(t),first=await f.prepare('first-distribution'),second=await f.prepare('second-distribution');
   assert.deepEqual(second,first);assert.equal(first.sourceCommit,f.sourceCommit);assert.equal(first.sharedShellRevision,f.lock.revision);
-  assert.equal(first.distributionRef,'refs/tags/plugin-v0.1.3');
+  assert.equal(first.distributionRef,'refs/tags/plugin-v0.1.4');
   assert.equal(f.git('rev-parse','HEAD'),f.sourceCommit,'preparation cannot switch the source checkout');
   assert.equal(f.git('rev-list','--parents','-n','1',first.distributionCommit),first.distributionCommit,'installable tree has no source/history parents');
   const tree=f.git('ls-tree','-r',first.distributionCommit);
@@ -224,17 +224,17 @@ test('installable Git preparation is deterministic, self-contained and pins exac
 
 test('source version, marketplace target, source tag and clean tracked bytes are release requirements',async t=>{
   const f=await distributionFixture(t),options={sourceRepository:f.sourceRepository,shellRepository:f.repository,
-    outputDirectory:path.join(f.directory,'rejected'),sourceCommit:f.sourceCommit,version:'0.1.3'};
+    outputDirectory:path.join(f.directory,'rejected'),sourceCommit:f.sourceCommit,version:'0.1.4'};
   await assert.rejects(preparePluginDistribution({...options,sourceCommit:'f'.repeat(40)}),/exact clean release commit/u);
-  await assert.rejects(preparePluginDistribution({...options,version:'0.1.3-draft'}),/exact clean release commit/u);
-  f.git('tag','-d','v0.1.3');await assert.rejects(preparePluginDistribution(options),/Git operation failed/u);f.git('tag','v0.1.3');
+  await assert.rejects(preparePluginDistribution({...options,version:'0.1.4-draft'}),/exact clean release commit/u);
+  f.git('tag','-d','v0.1.4');await assert.rejects(preparePluginDistribution(options),/Git operation failed/u);f.git('tag','v0.1.4');
   await fs.appendFile(path.join(f.sourceRepository,'plugins/trelio-digital-assistant/plugin.json'),'\n');
   await assert.rejects(preparePluginDistribution(options),/exact clean release commit/u);
   f.git('restore','--','plugins/trelio-digital-assistant/plugin.json');
   const catalog=path.join(f.sourceRepository,'.agents/plugins/marketplace.json'),data=JSON.parse(await fs.readFile(catalog));
   data.plugins[0].source.ref='main';await fs.writeFile(catalog,JSON.stringify(data));f.git('add','.');
   f.git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Wrong distribution source');
-  const moved=f.git('rev-parse','HEAD');f.git('tag','-d','v0.1.3');f.git('tag','v0.1.3');
+  const moved=f.git('rev-parse','HEAD');f.git('tag','-d','v0.1.4');f.git('tag','v0.1.4');
   await assert.rejects(preparePluginDistribution({...options,sourceCommit:moved}),/exact installable Git release/u);
   await assert.rejects(fs.stat(options.outputDirectory),{code:'ENOENT'});
 });
@@ -251,7 +251,7 @@ test('publication creates only the immutable generated tag and an exact repeat p
   // Real Windows CI exposed the default autocrlf rewrite. Exercise it on ALL
   // OSes instead of disabling conversion in the fixture and hiding a broken
   // install. Generated attributes must preserve every inventory byte.
-  execFileSync('git',['clone','-q','--config','core.autocrlf=true','--branch','plugin-v0.1.3',f.remote,install],{stdio:['ignore','pipe','pipe']});
+  execFileSync('git',['clone','-q','--config','core.autocrlf=true','--branch','plugin-v0.1.4',f.remote,install],{stdio:['ignore','pipe','pipe']});
   assert.equal(execFileSync('git',['-C',install,'config','--get','core.autocrlf'],{encoding:'utf8'}).trim(),'true');
   const integrity=JSON.parse(await fs.readFile(path.join(install,'package-integrity.json'),'utf8'));
   for(const file of [...integrity.files,{path:'package-integrity.json'}])
@@ -298,7 +298,7 @@ test('failed or noisy remote metadata never turns into a missing installable tag
 test('marketplace and tagged workflow publish an existing builder Git source after exact three-OS evidence',async()=>{
   const marketplace=JSON.parse(await fs.readFile(path.join(ROOT,'.agents/plugins/marketplace.json')));
   assert.equal(marketplace.name,'trelio-digital-assistants');assert.equal(marketplace.plugins.length,1);
-  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:'plugin-v0.1.3'});
+  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:'plugin-v0.1.4'});
   assert.deepEqual(marketplace.plugins[0].policy,{installation:'AVAILABLE',authentication:'ON_INSTALL'});
   const workflow=await fs.readFile(path.join(ROOT,'.github/workflows/plugin-tests.yml'),'utf8');
   assert.match(workflow,/tags: \['v\*'\]/u);assert.doesNotMatch(workflow,/tags:.*plugin-v/u);

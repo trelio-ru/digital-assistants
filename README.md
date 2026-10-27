@@ -37,8 +37,8 @@ codex plugin marketplace add trelio-ru/digital-assistants --ref main
 ```
 
 Каталог `trelio-digital-assistants` предлагает `trelio-digital-assistant`.
-Его source – immutable `plugin-v0.1.3` с готовым плагином в корне Git tree.
-Source tag `v0.1.3` и generated tag различаются: папка `plugins/` на main
+Его source – immutable `plugin-v0.1.4` с готовым плагином в корне Git tree.
+Source tag `v0.1.4` и generated tag различаются: папка `plugins/` на main
 остаётся исходниками, а семь shared shell файлов добавляет прежний builder.
 До успешного tagged workflow и read-back generated ref установка из каталога
 ещё недоступна. Marketplace registration не устанавливает плагин и не включает

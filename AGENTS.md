@@ -60,7 +60,8 @@ Task reference keeps nonexclusive conversation correlation and exact per-origina
 corporate Secret creation through the SAME host/owner ledger, not new executors.
 First-send hints never permit send replay or replace a native route receipt.
 Marketplace main ссылается только на self-contained generated `plugin-vX.Y.Z`,
-не на неполную source-папку. Source tag `vX.Y.Z` после exact 3-OS CI использует
+не на неполную source-папку. Релиз 0.1.4 доставляет per-original routing reference
+при неизменных hooks и shared shell pin. Source tag `vX.Y.Z` после exact 3-OS CI использует
 тот же builder/pin и существующий workflow; generated ref не запускает новый
 release. Native Git создаёт immutable ref один раз и делает exact read-back;
 mismatch/unknown не разрешают force/replay. Порядок – `docs/architecture.md`.
