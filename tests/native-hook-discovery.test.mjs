@@ -14,7 +14,10 @@ import {buildHookPlugin} from '../scripts/build-plugin.mjs';
 test('native Codex keeps hook hashes across main updates and detects executable hook changes',{
   skip:!process.env.TRELIO_TEST_CODEX_CLI||!process.env.TRELIO_TEST_SHARED_SHELL,
 },async t=>{
-  const root=await fs.mkdtemp(path.join(os.tmpdir(),'assistant-native-hooks-'));
+  // Hosted Windows TEMP may use RUNNER~1 while native Codex returns its long
+  // runneradmin spelling. Canonicalize only our disposable fixture root before
+  // deriving exact expected paths; do not relax installation/path assertions.
+  const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'assistant-native-hooks-')));
   // Windows may retain a just-closed native SQLite/directory handle briefly
   // after process exit. Retry only removal of this owned fixture, with a fixed
   // bound; discovery, installation and native requests are never repeated.
