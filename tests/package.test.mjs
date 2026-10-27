@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { buildPlugin, SHELL_FILES, preparePluginDistribution, publishPluginDistribution } from '../scripts/build-plugin.mjs';
+import { buildPlugin, buildHookPlugin, HOOK_PLUGIN_NAME, SHELL_FILES, preparePluginDistribution, publishPluginDistribution, prepareHookDependency, publishHookDependency } from '../scripts/build-plugin.mjs';
 import { get_encoding } from 'tiktoken';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -40,7 +40,7 @@ async function fixture(t) {
   const lockPath = path.join(directory, 'lock.json');
   await fs.writeFile(lockPath, JSON.stringify(lock));
   return { directory, repository, prefix, lock, lockPath, git,
-    options: (name, extra = {}) => ({ shellRepository: repository, lockPath,
+    options: (name, extra = {}) => ({ shellRepository: repository, lockPath, hookLockPath: lockPath,
       outputDirectory: path.join(directory, name), ...extra }) };
 }
 
@@ -136,7 +136,17 @@ test('installed composition uses only the assistant profile and resolves onboard
     assert.ok((await fs.stat(path.resolve(root, relative))).isFile());
   }
   assert.ok((await fs.stat(path.resolve(root, extension.onboardingSkill))).isFile());
-  const hooks = JSON.parse(await fs.readFile(path.resolve(root, extension.hooks)));
+  assert.equal(extension.hooks,undefined,'mutable main package owns no hooks');
+  await assert.rejects(fs.stat(path.join(root,'hooks')),{code:'ENOENT'});
+  const mainIntegrity=JSON.parse(await fs.readFile(path.join(root,'package-integrity.json')));
+  await buildHookPlugin(f.options('stable-hooks'));
+  const hookRoot=path.join(f.directory,'stable-hooks');
+  const hookManifest=JSON.parse(await fs.readFile(path.join(hookRoot,'.codex-plugin/plugin.json')));
+  assert.equal(hookManifest.name,HOOK_PLUGIN_NAME);
+  assert.equal(hookManifest.mcpServers,undefined);
+  assert.equal(hookManifest.skills,undefined);
+  assert.equal(mainIntegrity.hookComponent.integritySha256,sha256(await fs.readFile(path.join(hookRoot,'package-integrity.json'))));
+  const hooks = JSON.parse(await fs.readFile(path.resolve(hookRoot, hookManifest.hooks)));
   const matcher = new RegExp(hooks.hooks.PreToolUse[0].matcher);
   for (const name of ['mcp__trelio_assistant__complete_pass',
     'mcp__plugin_trelio-digital-assistant_trelio-assistant__get_task', 'trelio-assistant/get_task']) {
@@ -187,15 +197,17 @@ async function distributionFixture(t) {
   const f=await fixture(t),sourceRepository=path.join(f.directory,'source'),remote=path.join(f.directory,'remote.git');
   await fs.mkdir(path.join(sourceRepository,'plugins'),{recursive:true});
   await fs.cp(SOURCE,path.join(sourceRepository,'plugins/trelio-digital-assistant'),{recursive:true});
+  await fs.cp(path.join(ROOT,'plugins',HOOK_PLUGIN_NAME),path.join(sourceRepository,'plugins',HOOK_PLUGIN_NAME),{recursive:true});
   await fs.copyFile(f.lockPath,path.join(sourceRepository,'shared-shell.lock.json'));
+  await fs.copyFile(f.lockPath,path.join(sourceRepository,'hook-shell.lock.json'));
   await fs.mkdir(path.join(sourceRepository,'.agents/plugins'),{recursive:true});
   await fs.copyFile(path.join(ROOT,'.agents/plugins/marketplace.json'),path.join(sourceRepository,'.agents/plugins/marketplace.json'));
   const git=(...args)=>execFileSync('git',['-C',sourceRepository,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
   git('init','-q','-b','main');git('config','core.autocrlf','false');git('add','.');
   git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Release source');
-  const sourceCommit=git('rev-parse','HEAD');git('tag','v0.1.4');
+  const sourceCommit=git('rev-parse','HEAD');git('tag','v0.1.5');
   execFileSync('git',['init','-q','--bare',remote],{stdio:['ignore','pipe','pipe']});git('remote','add','origin',remote);
-  const prepare=output=>preparePluginDistribution({sourceRepository,shellRepository:f.repository,outputDirectory:path.join(f.directory,output),sourceCommit,version:'0.1.4'});
+  const prepare=output=>preparePluginDistribution({sourceRepository,shellRepository:f.repository,outputDirectory:path.join(f.directory,output),sourceCommit,version:'0.1.5'});
   const publish=(prepared,runGit)=>publishPluginDistribution({sourceRepository,shellRepository:f.repository,prepared,runGit});
   return {...f,sourceRepository,remote,sourceCommit,git,prepare,publish};
 }
@@ -203,11 +215,11 @@ async function distributionFixture(t) {
 test('installable Git preparation is deterministic, self-contained and pins exact source, shell, bytes and modes',async t=>{
   const f=await distributionFixture(t),first=await f.prepare('first-distribution'),second=await f.prepare('second-distribution');
   assert.deepEqual(second,first);assert.equal(first.sourceCommit,f.sourceCommit);assert.equal(first.sharedShellRevision,f.lock.revision);
-  assert.equal(first.distributionRef,'refs/tags/plugin-v0.1.4');
+  assert.equal(first.distributionRef,'refs/tags/plugin-v0.1.5');
   assert.equal(f.git('rev-parse','HEAD'),f.sourceCommit,'preparation cannot switch the source checkout');
   assert.equal(f.git('rev-list','--parents','-n','1',first.distributionCommit),first.distributionCommit,'installable tree has no source/history parents');
   const tree=f.git('ls-tree','-r',first.distributionCommit);
-  assert.equal(tree.split('\n').length,17);assert.match(tree,/100755 blob [a-f0-9]{40}\tscripts\/launch-trelio-node/u);
+  assert.equal(tree.split('\n').length,16);assert.match(tree,/100755 blob [a-f0-9]{40}\tscripts\/launch-trelio-node/u);
   assert.doesNotMatch(tree,/credential|node_modules|AGENTS\.md|\.git\//u);
   const inventory=JSON.parse(f.git('show',`${first.distributionCommit}:package-integrity.json`));
   const inventoryBytes=Buffer.from(f.git('show',`${first.distributionCommit}:package-integrity.json`)+'\n');
@@ -224,17 +236,17 @@ test('installable Git preparation is deterministic, self-contained and pins exac
 
 test('source version, marketplace target, source tag and clean tracked bytes are release requirements',async t=>{
   const f=await distributionFixture(t),options={sourceRepository:f.sourceRepository,shellRepository:f.repository,
-    outputDirectory:path.join(f.directory,'rejected'),sourceCommit:f.sourceCommit,version:'0.1.4'};
+    outputDirectory:path.join(f.directory,'rejected'),sourceCommit:f.sourceCommit,version:'0.1.5'};
   await assert.rejects(preparePluginDistribution({...options,sourceCommit:'f'.repeat(40)}),/exact clean release commit/u);
-  await assert.rejects(preparePluginDistribution({...options,version:'0.1.4-draft'}),/exact clean release commit/u);
-  f.git('tag','-d','v0.1.4');await assert.rejects(preparePluginDistribution(options),/Git operation failed/u);f.git('tag','v0.1.4');
+  await assert.rejects(preparePluginDistribution({...options,version:'0.1.5-draft'}),/exact clean release commit/u);
+  f.git('tag','-d','v0.1.5');await assert.rejects(preparePluginDistribution(options),/Git operation failed/u);f.git('tag','v0.1.5');
   await fs.appendFile(path.join(f.sourceRepository,'plugins/trelio-digital-assistant/plugin.json'),'\n');
   await assert.rejects(preparePluginDistribution(options),/exact clean release commit/u);
   f.git('restore','--','plugins/trelio-digital-assistant/plugin.json');
   const catalog=path.join(f.sourceRepository,'.agents/plugins/marketplace.json'),data=JSON.parse(await fs.readFile(catalog));
   data.plugins[0].source.ref='main';await fs.writeFile(catalog,JSON.stringify(data));f.git('add','.');
   f.git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Wrong distribution source');
-  const moved=f.git('rev-parse','HEAD');f.git('tag','-d','v0.1.4');f.git('tag','v0.1.4');
+  const moved=f.git('rev-parse','HEAD');f.git('tag','-d','v0.1.5');f.git('tag','v0.1.5');
   await assert.rejects(preparePluginDistribution({...options,sourceCommit:moved}),/exact installable Git release/u);
   await assert.rejects(fs.stat(options.outputDirectory),{code:'ENOENT'});
 });
@@ -251,7 +263,7 @@ test('publication creates only the immutable generated tag and an exact repeat p
   // Real Windows CI exposed the default autocrlf rewrite. Exercise it on ALL
   // OSes instead of disabling conversion in the fixture and hiding a broken
   // install. Generated attributes must preserve every inventory byte.
-  execFileSync('git',['clone','-q','--config','core.autocrlf=true','--branch','plugin-v0.1.4',f.remote,install],{stdio:['ignore','pipe','pipe']});
+  execFileSync('git',['clone','-q','--config','core.autocrlf=true','--branch','plugin-v0.1.5',f.remote,install],{stdio:['ignore','pipe','pipe']});
   assert.equal(execFileSync('git',['-C',install,'config','--get','core.autocrlf'],{encoding:'utf8'}).trim(),'true');
   const integrity=JSON.parse(await fs.readFile(path.join(install,'package-integrity.json'),'utf8'));
   for(const file of [...integrity.files,{path:'package-integrity.json'}])
@@ -297,8 +309,8 @@ test('failed or noisy remote metadata never turns into a missing installable tag
 
 test('marketplace and tagged workflow publish an existing builder Git source after exact three-OS evidence',async()=>{
   const marketplace=JSON.parse(await fs.readFile(path.join(ROOT,'.agents/plugins/marketplace.json')));
-  assert.equal(marketplace.name,'trelio-digital-assistants');assert.equal(marketplace.plugins.length,1);
-  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:'plugin-v0.1.4'});
+  assert.equal(marketplace.name,'trelio-digital-assistants');assert.equal(marketplace.plugins.length,2);
+  assert.deepEqual(marketplace.plugins[0].source,{source:'url',url:'https://github.com/trelio-ru/digital-assistants.git',ref:'plugin-v0.1.5'});
   assert.deepEqual(marketplace.plugins[0].policy,{installation:'AVAILABLE',authentication:'ON_INSTALL'});
   const workflow=await fs.readFile(path.join(ROOT,'.github/workflows/plugin-tests.yml'),'utf8');
   assert.match(workflow,/tags: \['v\*'\]/u);assert.doesNotMatch(workflow,/tags:.*plugin-v/u);
@@ -310,4 +322,46 @@ test('marketplace and tagged workflow publish an existing builder Git source aft
   assert.match(workflow,/ref: \$\{\{ steps\.shell\.outputs\.revision \}\}/u);
   assert.match(workflow,/preparePluginDistribution/u);assert.match(workflow,/publishPluginDistribution/u);
   assert.doesNotMatch(workflow,/npm publish|--force|git push.*main|trelio-backend|SIGNING_KEY/u);
+});
+
+test('main releases retain the original immutable hook release instead of minting version-dependent hook bundles',async t=>{
+  const f=await distributionFixture(t);
+  const first=await prepareHookDependency({sourceRepository:f.sourceRepository,shellRepository:f.repository,
+    outputDirectory:path.join(f.directory,'hooks-first'),sourceCommit:f.sourceCommit});
+  assert.equal(first.mode,'publish');assert.equal(first.prepared.version,'0.1.0');assert.equal(first.prepared.sourceTag,'v0.1.5');
+  await publishHookDependency({sourceRepository:f.sourceRepository,shellRepository:f.repository,sourceCommit:f.sourceCommit,dependency:first});
+  await fs.writeFile(path.join(f.sourceRepository,'hook-component.lock.json'),JSON.stringify(first.prepared,null,2)+'\n');
+  const manifestPath=path.join(f.sourceRepository,'plugins/trelio-digital-assistant/plugin.json');
+  const manifest=JSON.parse(await fs.readFile(manifestPath));manifest.version='0.1.6';await fs.writeFile(manifestPath,JSON.stringify(manifest));
+  const marketPath=path.join(f.sourceRepository,'.agents/plugins/marketplace.json'),market=JSON.parse(await fs.readFile(marketPath));
+  market.plugins[0].source.ref='plugin-v0.1.6';await fs.writeFile(marketPath,JSON.stringify(market));
+  f.git('add','.');f.git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Unchanged hooks, updated main');
+  f.git('tag','v0.1.6');const sourceCommit=f.git('rev-parse','HEAD');
+  const retained=await prepareHookDependency({sourceRepository:f.sourceRepository,shellRepository:f.repository,
+    outputDirectory:path.join(f.directory,'hooks-retained'),sourceCommit});
+  assert.equal(retained.mode,'retained');assert.deepEqual(retained.prepared,first.prepared);
+  let pushes=0;
+  const runGit=(repository,args)=>{if(args[0]==='push')pushes++;return spawnSync('git',['-C',repository,...args]);};
+  const readBack=await publishHookDependency({sourceRepository:f.sourceRepository,shellRepository:f.repository,sourceCommit,dependency:retained,runGit});
+  assert.equal(readBack.alreadyPublished,true);assert.equal(pushes,0,'a main-only release cannot rewrite or republish trusted executable bytes');
+  await assert.rejects(publishHookDependency({sourceRepository:f.sourceRepository,shellRepository:f.repository,sourceCommit,dependency:{...retained,mode:'publish'},runGit}),/locked/);
+  // A real executable change requires a new component version/release/review;
+  // it cannot inherit the previous bundle's provenance or native approval.
+  await fs.appendFile(path.join(f.sourceRepository,'plugins',HOOK_PLUGIN_NAME,'hooks/hooks.json'),'\n');
+  f.git('add','.');f.git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','Changed executable component');
+  f.git('tag','-d','v0.1.6');f.git('tag','v0.1.6');
+  await assert.rejects(prepareHookDependency({sourceRepository:f.sourceRepository,shellRepository:f.repository,
+    outputDirectory:path.join(f.directory,'changed-hooks'),sourceCommit:f.git('rev-parse','HEAD')}),/hook bytes changed/);
+  assert.equal(pushes,0);
+});
+
+test('main shell pin changes do not rewrite an unchanged independently pinned hook component',async t=>{
+  const f=await fixture(t);
+  const a=await buildPlugin(f.options('old-main-pin'));
+  await fs.writeFile(path.join(f.repository,'README.md'),'Synthetic non-hook source metadata change\n');
+  f.git('add','.');f.git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','New main-only shell provenance');
+  const newerLock=path.join(f.directory,'main-new-lock.json');await fs.writeFile(newerLock,JSON.stringify({...f.lock,revision:f.git('rev-parse','HEAD')}));
+  const b=await buildPlugin(f.options('new-main-pin',{lockPath:newerLock}));
+  assert.notEqual(a.sharedShell.revision,b.sharedShell.revision);
+  assert.deepEqual(a.hookComponent,b.hookComponent,'main provenance must never contaminate native hook approval');
 });

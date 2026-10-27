@@ -37,24 +37,23 @@ structural retract и обычный encrypted correction Run, без direct res
 
 ## Формат и shared shell
 
-Source использует portable `plugin.json` + `mcp.json` для единственного описания
-метаданных. Устанавливаемый пакет использует поддерживаемый Codex compatibility
-manifest `.codex-plugin/plugin.json`, как человеческий плагин. Codex
-`0.164.0-alpha.11.1` реально видел MCP/skills portable пакета, но возвращал ноль
-hooks и в `hooks/list`, и в `/hooks`. В [native loader](https://github.com/openai/codex/blob/main/codex-rs/core-plugins/src/loader.rs)
-формат `AgentPlugin` явно получает пустые hook sources. Наличие файла hooks и
-корректного extension поэтому не является проверкой discovery.
+Основной source использует portable `plugin.json` + `mcp.json` для metadata,
+MCP и skills. Отдельный hook-only source имеет собственный неизменяемый manifest.
+Оба устанавливаемых пакета используют `.codex-plugin/plugin.json`. Исторический
+combined package 0.1.3 понадобился потому, что Codex 0.164 пропускает hooks формата
+Agent Plugins даже при наличии hooks.json; это не повод обходить native trust.
 
-Один builder переводит только metadata/paths: flat interface, skills/onboarding,
-hooks и inline MCP. Source `${PLUGIN_ROOT}` становится native `cwd: "."` под
-compatibility parser. Root `plugin.json` удаляется из generated inventory:
-иначе он имеет приоритет и снова выбирает формат без hooks. Второго server,
-executor, схемы авторизации или копии shell нет. Исходные hook bytes сохранены.
-Native Windows gate использует официальный Codex `rust-v0.164.0`, pinned hashes,
-изолированные HOME/USERPROFILE/CODEX_HOME и local fixture marketplace. Он требует
-три обнаруженных `untrusted` hooks без входа, model turn, Trelio MCP execution
-или изменения trust. После обновления пользователь один раз просматривает hooks
-в штатном клиенте. Запись trusted_hash или обход trust агентом запрещены.
+Тот же builder переводит presentation/paths основного manifest и отдельно
+упаковывает три прежних hooks с exact Git-pinned общей оболочкой. Source
+`${PLUGIN_ROOT}` становится native `cwd: "."`. Root `plugin.json` в generated
+inventory не остаётся. Ни второй MCP server, ни новый executor не появляются.
+
+Native Windows gate использует официальный `rust-v0.164.0` и pinned hashes,
+изолированные HOME/USERPROFILE/CODEX_HOME и local fixture marketplace. Он
+проверяет три `untrusted` hooks без входа, model turn, Trelio MCP или trust writes.
+Main version/instruction update обязан сохранять реальные `currentHash`; изменение
+hook или loader bytes обязано менять их. Запись trusted_hash/approval migration
+и обход trust агентом запрещены.
 
 `command: "./scripts/launch-trelio-node"` сохраняется общим с pinned shell.
 Native Codex Windows MCP launcher разрешает исполняемый файл через общий
@@ -65,7 +64,8 @@ Native Codex Windows MCP launcher разрешает исполняемый фа
 [Официальный local MCP пример](https://developers.openai.com/plugins/deploy/desktop-only#configure-a-local-mcp-server)
 использует тот же root placeholder.
 
-Стабильный shell из `agent-workspaces` закреплён в `shared-shell.lock.json`.
+Стабильный shell из `agent-workspaces` закреплён в `shared-shell.lock.json`
+для main и независимо в `hook-shell.lock.json` для hook-компонента.
 Builder читает exact Git blobs, а не потенциально dirty checkout. Семь shell
 файлов копируются без изменения в generated output; source shell не форкается.
 Версия shell 3.2.3 обозначает совместимость общей проверки подписи и не является
@@ -78,6 +78,8 @@ Builder читает exact Git blobs, а не потенциально dirty che
 «не применимо». Impact receipt сохраняет обе exact revisions и результат
 проверок. Floating `main` и локальная правка скопированного shell не допускаются;
 human-specific OAuth, manifests и инструкции автоматически не переносятся.
+Impact review рассматривает оба pins. Main-only metadata/lock changes не
+переписывают неизменённый hook-компонент и его provenance.
 Compatible signed runtime update не меняет этот pin и не требует plugin release.
 
 Private-credential flow находится в существующем task-worker reference.
@@ -138,17 +140,17 @@ Source → очередь → тот же native chat → business receipt → �
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.4`. В этом ref
-native `.codex-plugin/plugin.json` находится рядом с готовыми hooks/skills и семью
+Git source `url` этого же repository с immutable ref `plugin-v0.1.5`. В этом ref
+native `.codex-plugin/plugin.json` находится рядом с готовыми skills/MCP и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.4` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.5` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
 После exact successful source package gate на Linux/macOS/Windows оператор
-создаёт source tag `v0.1.4` и отправляет его guarded
-`npm run git:push-main -- --tag v0.1.4`. Штатный `plugin-tests.yml` для tag:
+создаёт source tag `v0.1.5` и отправляет его guarded
+`npm run git:push-main -- --tag v0.1.5`. Штатный `plugin-tests.yml` для tag:
 
 1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
    package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
@@ -156,26 +158,28 @@ Generated `.gitattributes` сохраняет exact payload bytes также п�
    вызывает существующий builder. Native release helpers того же builder
    сверяют payload с tagged source и pinned shell. Нет credentials, runtime
    cache, installer, нового executor или изменённого human implementation.
-3. Сохраняет installable files, `distribution.json` и `source-gate.json` одним
+3. Сохраняет main/hook installable files, `distribution.json`, `hook-distribution.json`
+   и `source-gate.json` одним
    hosted artifact. `distribution.json` связывает source SHA/tag, exact orphan
    commit/tree, pinned shell SHA и SHA-256 `package-integrity.json`; inventory
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
-4. Создаёт только `refs/tags/plugin-v0.1.4` одним native push и перечитывает
+4. Сначала публикует или проверяет exact hook dependency, затем создаёт
+   `refs/tags/plugin-v0.1.5` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.4` commit,
+После workflow read-back обязан подтвердить remote `plugin-v0.1.5` commit,
 `.codex-plugin/plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
-launchers в clone этого ref. Marketplace refresh должен разрешить ту же запись;
+launchers в clone этого ref, а также отдельный immutable hook ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
 получает новый source tag и новый generated ref; прежние tags остаются immutable.
 
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.4`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.5`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
@@ -187,3 +191,43 @@ intent before one request; the receipt admits an attempt, not delivery or replay
 Encrypted declarations/arguments stay in the native-selected common payload flow.
 PAT/OAuth enrollment needs a human in the existing protected local UI. These
 runtime/DB/crypto checks do not assert Windows pilot or business readiness.
+
+## Независимый hook-компонент
+
+Codex 0.164 вычисляет `plugin_content_hash` по всему hook-owning bundle, включая
+metadata и Markdown, и проверяет `trusted_content_hash` при исполнении. Простое
+сохранение hooks.json при bump основного manifest поэтому не сохраняет trust.
+Причина проверена в native `hooks/list`, а не выведена из Windows/CLI интерфейса.
+
+Основной пакет с 0.1.5 не объявляет hooks. Его `package-integrity.json` содержит
+закрытый `hookComponent` descriptor: exact pluginId, независимую версию и SHA-256
+inventory требуемого `trelio-digital-assistant-hooks`. Второй пакет содержит только
+native manifest, три hooks, семь exact Git-pinned общих shell files и integrity
+metadata. В нём нет main version, skills/MCP, контекста, credentials или source SHA
+текущего main release. Общая оболочка не форкается.
+
+Первый source tag публикует `hooks-v0.1.0` перед `plugin-v0.1.5`. Оба результата
+используют прежние builder, source gate, native immutable-ref push и read-back.
+После публикации structural receipt hook release фиксируется в tracked
+`hook-component.lock.json`. Следующий main release сверяет полный component tree,
+исходный tag/commit, provenance и remote ref; совпавший hook ref не пересоздаётся
+и не получает новую фиктивную provenance. Изменение компонента требует отдельной
+версии/публикации и native human review. Не делайте metadata-only bump hook версии.
+
+Runtime использует третий закрытый профиль SAME immutable-tree/retention/native
+installer engine. Он проверяет официальный marketplace, version/ref, regular
+files, полный inventory и все executable bytes. Missing dependency может быть
+установлена; human-disabled, newer или same-version altered dependency не
+перезаписывается. Перед одним native add сохраняется intent в существующем
+identity-bound updater journal. Потерянный ответ допускает только exact read-back;
+unknown не повторяет add. Dependency-changing failure не откатывается в combined
+legacy main с дублирующими hooks. Initial explicit background install использует
+тот же intent, включая opt-out из последующих обновлений.
+
+Native preflight требует ровно три trusted hooks единственного выбранного
+источника. Mixed legacy+companion, wrong version/path, отсутствующие/изменённые
+bytes, untrusted/modified native statuses блокируют запуск. Codex доверие остаётся
+неизменяемым для runtime: нет hash copying, auto-approval, managed-source spoof,
+bypass flags, symlink indirection или размещения меняющихся файлов в исключениях
+fingerprint scanner. Одобрение нового компонента при первой миграции – реальное
+изменение hook identity; после него main-only updates не требуют нового review.

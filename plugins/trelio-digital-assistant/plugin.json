@@ -1,26 +1,33 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "trelio-digital-assistant",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Цифровой ассистент Trelio: привязка к владельцу, работа по задачам и регулярные проверки в общем runtime.",
-  "author": { "name": "Trelio", "url": "https://trelio.ru" },
+  "author": {
+    "name": "Trelio",
+    "url": "https://trelio.ru"
+  },
   "repository": "https://github.com/trelio-ru/digital-assistants",
   "extensions": {
     "com.openai": {
       "onboardingSkill": "./skills/assistant-setup/SKILL.md",
-      "hooks": "./hooks/hooks.json",
       "interface": {
         "displayName": "Цифровой ассистент Trelio",
         "shortDescription": "Работа по поручениям владельца в Trelio",
         "longDescription": "Привязывает компьютер цифрового ассистента без входа владельца в Trelio на этом компьютере. Использует общие правила, навыки и рабочие пространства, отдельный чат каждой задачи и регулярные проверки в runtime.",
         "developerName": "Trelio",
         "category": "Productivity",
-        "capabilities": ["Read", "Write"],
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
         "websiteURL": "https://trelio.ru",
         "composerIcon": "./assets/trelio-assistant-composer-icon.svg",
         "logo": "./assets/trelio-assistant-logo.svg",
         "logoDark": "./assets/trelio-assistant-logo-dark.svg",
-        "defaultPrompt": ["Настрой этот компьютер цифрового ассистента Trelio."]
+        "defaultPrompt": [
+          "Настрой этот компьютер цифрового ассистента Trelio."
+        ]
       }
     }
   }

@@ -5,7 +5,7 @@
 и циклы в общем host runtime. Владелец подтверждает привязку на своём устройстве;
 его Trelio browser-session не переносится на компьютер ассистента.
 
-Пакет: `plugins/trelio-digital-assistant`, единый source manifest/MCP/hooks и две skills; builder выдаёт native Codex manifest.
+Пакет: `plugins/trelio-digital-assistant`, MCP и две skills; стабильный hook-компонент: `plugins/trelio-digital-assistant-hooks`; builder выдаёт native Codex manifest.
 Общий stable shell добавляется только при сборке из exact Git revision:
 
 ```sh
@@ -37,8 +37,8 @@ codex plugin marketplace add trelio-ru/digital-assistants --ref main
 ```
 
 Каталог `trelio-digital-assistants` предлагает `trelio-digital-assistant`.
-Его source – immutable `plugin-v0.1.4` с готовым плагином в корне Git tree.
-Source tag `v0.1.4` и generated tag различаются: папка `plugins/` на main
+Его source – immutable `plugin-v0.1.5` с готовым плагином в корне Git tree.
+Source tag `v0.1.5` и generated tag различаются: папка `plugins/` на main
 остаётся исходниками, а семь shared shell файлов добавляет прежний builder.
 До успешного tagged workflow и read-back generated ref установка из каталога
 ещё недоступна. Marketplace registration не устанавливает плагин и не включает
@@ -48,3 +48,18 @@ Codex 0.164 пропускает lifecycle hooks root Agent Plugins. Устан�
 поэтому использует `.codex-plugin/plugin.json`, как человеческий Trelio plugin.
 Native Windows gate проверяет реальное обнаружение трёх hooks без их одобрения.
 Общий shell и hook bytes сохраняются; доверие подтверждает человек в Codex.
+
+С версии 0.1.5 hooks принадлежат отдельному пакету `trelio-digital-assistant-hooks`
+в этом же официальном marketplace. Он содержит только три определения hooks и
+неизменённую общую оболочку из exact Git pin. Рабочие инструкции/MCP и версия
+основного плагина в этот пакет не входят: обновление основного плагина не меняет
+его хэш доверия Codex.
+
+При переходе со старого объединённого пакета человек один раз просматривает hooks
+нового компонента. Никакие прежние approvals не переносятся. В дальнейшем review
+нужен при изменении hook-компонента; его полный пакет по-прежнему проверяет сам
+Codex. Signed runtime автоматически устанавливает нужную зависимость штатным
+`plugin add`, проверяет exact bytes и останавливается для native review, если он
+нужен. Он не правит trust/config и не включает отключённый человеком компонент.
+Для первоначальной настройки зависимость готовит явный `install_assistant_background`,
+даже когда последующие автоматические обновления выключены.

@@ -12,7 +12,7 @@ export const SHELL_FILES = Object.freeze([
   'trelio-host-runtime-shell.mjs', 'trelio-mcp-startup-budget.mjs',
 ]);
 const SOURCE_FILES = Object.freeze([
-  'plugin.json', 'mcp.json', 'hooks/hooks.json',
+  'plugin.json', 'mcp.json',
   // Presentation assets belong to this plugin, not the pinned shared shell.
   // Keep every manifest image explicit so both local and tagged builds include
   // identical reviewed bytes in their integrity inventories.
@@ -21,6 +21,12 @@ const SOURCE_FILES = Object.freeze([
   'skills/assistant-setup/SKILL.md', 'skills/assistant-task-worker/SKILL.md',
   'skills/assistant-task-worker/references/work-state.md',
 ]);
+// Codex fingerprints the ENTIRE hook-owning plugin, not just hooks.json.
+// Keep this executable component independent of versioned MCP/skill content.
+// Both packages still use the same exact Git-pinned shell; there is no copied
+// executor and no approval migration, ignored-file trick or trust bypass.
+export const HOOK_PLUGIN_NAME = 'trelio-digital-assistant-hooks';
+const HOOK_SOURCE_FILES = Object.freeze(['plugin.json', 'hooks/hooks.json']);
 const MAX_FILE_BYTES = 1024 * 1024;
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const fail = (message) => { throw new Error(message); };
@@ -32,19 +38,19 @@ const VERSION = /^\d+\.\d+\.\d+$/u;
  * component cannot silently become part of a distributable plugin: changing the
  * explicit payload list is a reviewable source change. Parent symlinks within
  * the source root are rejected as well as final-file symlinks. */
-async function readSource(root) {
+async function readSource(root, expectedFiles = SOURCE_FILES) {
   const files = new Map();
   async function visit(directory, prefix = '') {
     for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
       const relative = prefix + entry.name;
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) {
-        if (!SOURCE_FILES.some((name) => name.startsWith(relative + '/'))) {
+        if (!expectedFiles.some((name) => name.startsWith(relative + '/'))) {
           fail(`Unexpected source directory: ${relative}`);
         }
         await visit(absolute, relative + '/');
       } else {
-        if (!entry.isFile() || !SOURCE_FILES.includes(relative)) {
+        if (!entry.isFile() || !expectedFiles.includes(relative)) {
           fail(`Unexpected or non-regular source file: ${relative}`);
         }
         const stat = await fs.lstat(absolute);
@@ -58,7 +64,7 @@ async function readSource(root) {
   const metadata = await fs.lstat(root);
   if (!metadata.isDirectory() || metadata.isSymbolicLink()) fail('Unsafe source root');
   await visit(root);
-  if (files.size !== SOURCE_FILES.length) fail('Incomplete plugin source');
+  if (files.size !== expectedFiles.length) fail('Incomplete plugin source');
   return files;
 }
 
@@ -100,14 +106,14 @@ function readShell(repository, lock) {
 /** One inventory format for local builds and the installable Git source. The
  * generated ref contains these exact bytes/modes, not another shell source or
  * a ZIP transport invented by the marketplace. */
-function pluginIntegrity(files, lock) {
+function pluginIntegrity(files, lock, hookComponent = null) {
   const manifest = JSON.parse(files.get('.codex-plugin/plugin.json').bytes.toString());
-  if (manifest.name !== 'trelio-digital-assistant') fail('Unexpected plugin identity');
+  if (!['trelio-digital-assistant', HOOK_PLUGIN_NAME].includes(manifest.name)) fail('Unexpected plugin identity');
   const inventory = [...files].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
     .map(([name, entry]) => ({ path: name, mode: entry.mode, size: entry.bytes.length,
       sha256: sha256(entry.bytes) }));
   return { schemaVersion: 1, plugin: manifest.name, version: manifest.version,
-    sharedShell: lock, files: inventory };
+    sharedShell: lock, files: inventory, ...(hookComponent ? {hookComponent} : {}) };
 }
 const integrityFile = integrity => ({
   bytes: Buffer.from(JSON.stringify(integrity, null, 2) + '\n'), mode: 0o644,
@@ -126,12 +132,12 @@ function completePluginFiles(files, shellRepository, lock) {
   const server = mcp.mcpServers?.['trelio-assistant'];
   if (Object.keys(mcp.mcpServers ?? {}).join(',') !== 'trelio-assistant'
     || server?.cwd !== '${PLUGIN_ROOT}' || server.type !== 'stdio'
-    || extension?.hooks !== './hooks/hooks.json') fail('Unsupported assistant source composition');
+    || extension?.hooks !== undefined) fail('Unsupported assistant source composition');
   const { type: _type, cwd: _cwd, ...nativeServer } = server;
   const manifest = { name: portable.name, version: portable.version,
     description: portable.description, author: portable.author,
     repository: portable.repository, skills: './skills/',
-    hooks: extension.hooks, onboardingSkill: extension.onboardingSkill,
+    onboardingSkill: extension.onboardingSkill,
     interface: extension.interface,
     // Native compatibility discovery resolves "." from the plugin root. The
     // portable source keeps ${PLUGIN_ROOT}; do not confuse the two parsers.
@@ -149,35 +155,69 @@ function completePluginFiles(files, shellRepository, lock) {
   return files;
 }
 
+function completeHookPluginFiles(files, shellRepository, lock) {
+  const manifest = JSON.parse(files.get('plugin.json').bytes);
+  if (manifest.name !== HOOK_PLUGIN_NAME || !VERSION.test(manifest.version ?? '')
+    || manifest.hooks !== './hooks/hooks.json'
+    || Object.keys(manifest).some(key => !['name','version','description','author','repository','hooks'].includes(key)))
+    fail('Unsupported stable hook component');
+  files.delete('plugin.json');
+  files.set('.codex-plugin/plugin.json', {
+    bytes: Buffer.from(JSON.stringify(manifest, null, 2) + '\n'), mode: 0o644,
+  });
+  for (const [name, entry] of readShell(shellRepository, lock)) files.set(name, entry);
+  files.set('.gitattributes', {bytes:Buffer.from('* -text\n'),mode:0o644});
+  return files;
+}
+
+const hookComponentDescriptor = (files, lock) => {
+  const integrity = pluginIntegrity(files, lock);
+  return {pluginId:`${HOOK_PLUGIN_NAME}@trelio-digital-assistants`,
+    version:integrity.version,integritySha256:sha256(integrityFile(integrity).bytes)};
+};
+
+async function writePluginOutput(files, lock, outputDirectory, hookComponent = null) {
+  const integrity = pluginIntegrity(files, lock, hookComponent);
+  files.set('package-integrity.json', integrityFile(integrity));
+  await fs.mkdir(outputDirectory, { mode: 0o755 });
+  try {
+    for (const [name, {bytes,mode}] of files) {
+      const destination=path.join(outputDirectory,name);
+      await fs.mkdir(path.dirname(destination), {recursive:true,mode:0o755});
+      await fs.writeFile(destination,bytes,{flag:'wx',mode});
+      await fs.chmod(destination,mode);
+    }
+  } catch (error) {
+    await fs.rm(outputDirectory,{recursive:true,force:true});
+    throw error;
+  }
+  return integrity;
+}
+
+export async function buildHookPlugin({shellRepository,outputDirectory,
+  sourceDirectory=path.join(ROOT,'plugins',HOOK_PLUGIN_NAME),
+  lockPath=path.join(ROOT,'hook-shell.lock.json')}) {
+  if(!shellRepository||!outputDirectory||!path.isAbsolute(outputDirectory))fail('Provide --shell-repo and an absolute --output directory');
+  const lock=JSON.parse(await fs.readFile(lockPath,'utf8'));
+  return writePluginOutput(completeHookPluginFiles(await readSource(sourceDirectory,HOOK_SOURCE_FILES),shellRepository,lock),lock,outputDirectory);
+}
+
 export async function buildPlugin({ shellRepository, outputDirectory,
   sourceDirectory = path.join(ROOT, 'plugins/trelio-digital-assistant'),
+  hookSourceDirectory = path.join(ROOT, 'plugins', HOOK_PLUGIN_NAME),
+  hookLockPath = path.join(ROOT,'hook-shell.lock.json'),
   lockPath = path.join(ROOT, 'shared-shell.lock.json') }) {
   if (!shellRepository || !outputDirectory || !path.isAbsolute(outputDirectory)) {
     fail('Provide --shell-repo and an absolute --output directory');
   }
   const lock = JSON.parse(await fs.readFile(lockPath, 'utf8'));
   const files = completePluginFiles(await readSource(sourceDirectory), shellRepository, lock);
-  // Hash payload and modes, omitting timestamps and local absolute paths. The
-  // manifest is an integrity inventory, not a publisher signature or admission.
-  const integrity = pluginIntegrity(files, lock);
-  files.set('package-integrity.json', integrityFile(integrity));
-
-  // Reserve a new directory exclusively: an existing installation/output must
-  // never be replaced, including after a failed concurrent build. Cleanup only
-  // removes the directory this invocation successfully created.
-  await fs.mkdir(outputDirectory, { mode: 0o755 });
-  try {
-    for (const [name, { bytes, mode }] of files) {
-      const destination = path.join(outputDirectory, name);
-      await fs.mkdir(path.dirname(destination), { recursive: true, mode: 0o755 });
-      await fs.writeFile(destination, bytes, { flag: 'wx', mode });
-      await fs.chmod(destination, mode);
-    }
-  } catch (error) {
-    await fs.rm(outputDirectory, { recursive: true, force: true });
-    throw error;
-  }
-  return integrity;
+  // The dependency descriptor binds the complete executable component bytes.
+  // It lives ONLY in the mutable main package. No main version/instructions,
+  // provenance or source commit can contaminate the hook bundle fingerprint.
+  const hookLock=JSON.parse(await fs.readFile(hookLockPath,'utf8'));
+  const hookFiles=completeHookPluginFiles(await readSource(hookSourceDirectory,HOOK_SOURCE_FILES),shellRepository,hookLock);
+  return writePluginOutput(files,lock,outputDirectory,hookComponentDescriptor(hookFiles,hookLock));
 }
 
 const runDistributionGit = (repository, args, options = {}) => spawnSync('git', ['-C', repository, ...args], {
@@ -192,32 +232,48 @@ const gitBytes = (repository, args, options) => {
 };
 const gitScalar = (repository, args, options) => gitBytes(repository, args, options).toString('utf8').replace(/\n$/u, '');
 
-function distributionSource(repository, sourceCommit, version) {
+function distributionSource(repository, sourceCommit, version, kind='assistant') {
+  if(!['assistant','hooks'].includes(kind))fail('Unsupported distribution kind');
+  if(!COMMIT.test(sourceCommit??'')||!VERSION.test(version??''))fail('Distribution source must be the exact clean release commit');
+  const name=kind==='hooks'?HOOK_PLUGIN_NAME:'trelio-digital-assistant';
+  // A source release tests both components together. Their installable
+  // versions are independent: the first main v0.1.5 may publish hooks 0.1.0.
+  const releaseVersion=kind==='hooks'?JSON.parse(gitBytes(repository,['show',`${sourceCommit}:plugins/trelio-digital-assistant/plugin.json`])).version:version;
+  if(!VERSION.test(releaseVersion??''))fail('Invalid source release version');
+  const sourceTag=`v${releaseVersion}`;
   if (!COMMIT.test(sourceCommit ?? '') || !VERSION.test(version ?? '')
     || gitScalar(repository, ['rev-parse', '--verify', 'HEAD^{commit}']) !== sourceCommit
-    || gitScalar(repository, ['rev-parse', '--verify', `refs/tags/v${version}^{commit}`]) !== sourceCommit
+    || gitScalar(repository, ['rev-parse', '--verify', `refs/tags/${sourceTag}^{commit}`]) !== sourceCommit
     || gitBytes(repository, ['status', '--porcelain', '--untracked-files=no']).length) fail('Distribution source must be the exact clean release commit');
-  const lock = JSON.parse(gitBytes(repository, ['show', `${sourceCommit}:shared-shell.lock.json`]));
+  const lock = JSON.parse(gitBytes(repository, ['show', `${sourceCommit}:${kind==='hooks'?'hook-shell':'shared-shell'}.lock.json`]));
   const marketplace = JSON.parse(gitBytes(repository, ['show', `${sourceCommit}:.agents/plugins/marketplace.json`]));
-  const entries = marketplace.plugins?.filter(entry => entry.name === 'trelio-digital-assistant');
-  const distributionRef = `refs/tags/plugin-v${version}`;
+  const entries = marketplace.plugins?.filter(entry => entry.name === name);
+  const ref=kind==='hooks'?`hooks-v${version}`:`plugin-v${version}`;
+  const distributionRef = `refs/tags/${ref}`;
   if (marketplace.name !== 'trelio-digital-assistants' || entries?.length !== 1
     || !entries[0].source || Object.keys(entries[0].source).sort().join(',') !== 'ref,source,url'
     || entries[0].source.source !== 'url' || entries[0].source.url !== DISTRIBUTION_REPOSITORY
-    || entries[0].source.ref !== `plugin-v${version}`)
+    || entries[0].source.ref !== ref)
     fail('Marketplace must select the exact installable Git release');
-  const files = new Map(SOURCE_FILES.map(name => [name, {
-    bytes: gitBytes(repository, ['show', `${sourceCommit}:plugins/trelio-digital-assistant/${name}`]), mode: 0o644,
+  const files = new Map((kind==='hooks'?HOOK_SOURCE_FILES:SOURCE_FILES).map(file => [file, {
+    bytes: gitBytes(repository, ['show', `${sourceCommit}:plugins/${name}/${file}`]), mode: 0o644,
   }]));
   const manifest = JSON.parse(files.get('plugin.json').bytes);
-  if (manifest.name !== 'trelio-digital-assistant' || manifest.version !== version) fail('Distribution release version differs from plugin manifest');
-  return { lock, files, distributionRef };
+  if (manifest.name !== name || manifest.version !== version) fail('Distribution release version differs from plugin manifest');
+  return { lock, files, distributionRef, sourceTag };
 }
 
-function expectedDistribution(repository, shellRepository, sourceCommit, version) {
-  const source = distributionSource(repository, sourceCommit, version);
-  completePluginFiles(source.files, shellRepository, source.lock);
-  const integrity = pluginIntegrity(source.files, source.lock);
+function expectedDistribution(repository, shellRepository, sourceCommit, version, kind='assistant') {
+  const source = distributionSource(repository, sourceCommit, version, kind);
+  let descriptor=null;
+  if(kind==='hooks')completeHookPluginFiles(source.files,shellRepository,source.lock);
+  else {
+    completePluginFiles(source.files,shellRepository,source.lock);
+    const hookFiles=new Map(HOOK_SOURCE_FILES.map(file=>[file,{bytes:gitBytes(repository,['show',`${sourceCommit}:plugins/${HOOK_PLUGIN_NAME}/${file}`]),mode:0o644}]));
+    const hookLock=JSON.parse(gitBytes(repository,['show',`${sourceCommit}:hook-shell.lock.json`]));
+    descriptor=hookComponentDescriptor(completeHookPluginFiles(hookFiles,shellRepository,hookLock),hookLock);
+  }
+  const integrity = pluginIntegrity(source.files, source.lock, descriptor);
   source.files.set('package-integrity.json', integrityFile(integrity));
   return { ...source, integrity };
 }
@@ -238,10 +294,11 @@ function writeDistributionTree(repository, files) {
   return write(root);
 }
 
-function writeDistributionCommit(repository, {tree,sourceCommit,version,sharedShellRevision,integritySha256}) {
+function writeDistributionCommit(repository, {tree,sourceCommit,version,sharedShellRevision,integritySha256,sourceTag=`v${version}`}, kind='assistant') {
   const timestamp = gitScalar(repository, ['show','-s','--format=%ct',sourceCommit]);
   if (!/^\d+$/u.test(timestamp)) fail('Invalid release source timestamp');
-  const message = `Installable trelio-digital-assistant ${version}\n\nSource: ${sourceCommit}\nSource tag: v${version}\nShared shell: ${sharedShellRevision}\nIntegrity SHA-256: ${integritySha256}\n`;
+  const name=kind==='hooks'?HOOK_PLUGIN_NAME:'trelio-digital-assistant';
+  const message = `Installable ${name} ${version}\n\nSource: ${sourceCommit}\nSource tag: ${sourceTag}\nShared shell: ${sharedShellRevision}\nIntegrity SHA-256: ${integritySha256}\n`;
   const commit = gitScalar(repository, ['-c','commit.gpgsign=false','commit-tree',tree], {input:Buffer.from(message),env:{...process.env,
     GIT_AUTHOR_NAME:'Trelio',GIT_AUTHOR_EMAIL:'noreply@trelio.ru',GIT_COMMITTER_NAME:'Trelio',GIT_COMMITTER_EMAIL:'noreply@trelio.ru',
     GIT_AUTHOR_DATE:`${timestamp} +0000`,GIT_COMMITTER_DATE:`${timestamp} +0000`}});
@@ -254,22 +311,25 @@ function writeDistributionCommit(repository, {tree,sourceCommit,version,sharedSh
  * bytes are independently compared with the SAME builder output before the
  * orphan installable commit is constructed. Its fixed metadata makes rerunning
  * preparation yield the same commit rather than a different immutable tag. */
-export async function preparePluginDistribution({ sourceRepository = ROOT, shellRepository, outputDirectory, sourceCommit, version }) {
-  const expected = expectedDistribution(sourceRepository, shellRepository, sourceCommit, version);
-  const integrity = await buildPlugin({shellRepository,outputDirectory,
-    sourceDirectory:path.join(sourceRepository,'plugins/trelio-digital-assistant'),
-    lockPath:path.join(sourceRepository,'shared-shell.lock.json')});
+export async function preparePluginDistribution({ sourceRepository = ROOT, shellRepository, outputDirectory, sourceCommit, version, kind='assistant' }) {
+  const expected = expectedDistribution(sourceRepository, shellRepository, sourceCommit, version,kind);
+  const build=kind==='hooks'?buildHookPlugin:buildPlugin;
+  const integrity = await build({shellRepository,outputDirectory,
+    sourceDirectory:path.join(sourceRepository,'plugins',kind==='hooks'?HOOK_PLUGIN_NAME:'trelio-digital-assistant'),
+    hookSourceDirectory:path.join(sourceRepository,'plugins',HOOK_PLUGIN_NAME),
+    hookLockPath:path.join(sourceRepository,'hook-shell.lock.json'),
+    lockPath:path.join(sourceRepository,kind==='hooks'?'hook-shell.lock.json':'shared-shell.lock.json')});
   if (JSON.stringify(integrity) !== JSON.stringify(expected.integrity)) fail('Builder output differs from the exact tagged source');
   for (const [name, entry] of expected.files) {
     if (!entry.bytes.equals(await fs.readFile(path.join(outputDirectory,name)))) fail('Builder payload changed after verification');
   }
   // Repeat the source check after asynchronous file I/O. A moved or modified
   // source cannot lend its release identity to an already prepared payload.
-  distributionSource(sourceRepository,sourceCommit,version);
+  distributionSource(sourceRepository,sourceCommit,version,kind);
   const tree = writeDistributionTree(sourceRepository, expected.files);
   const integritySha256 = sha256(expected.files.get('package-integrity.json').bytes);
-  const commit = writeDistributionCommit(sourceRepository,{tree,sourceCommit,version,sharedShellRevision:expected.lock.revision,integritySha256});
-  return {schemaVersion:1,version,sourceCommit,sourceTag:`v${version}`,distributionRef:expected.distributionRef,
+  const commit = writeDistributionCommit(sourceRepository,{tree,sourceCommit,version,sharedShellRevision:expected.lock.revision,integritySha256,sourceTag:expected.sourceTag},kind);
+  return {schemaVersion:1,version,sourceCommit,sourceTag:expected.sourceTag,distributionRef:expected.distributionRef,
     distributionCommit:commit,tree,sharedShellRevision:expected.lock.revision,integritySha256};
 }
 
@@ -282,14 +342,15 @@ export async function publishPluginDistribution({ sourceRepository = ROOT, shell
   if (!prepared || Object.keys(prepared).sort().join(',') !== keys.sort().join(',')
     || prepared.schemaVersion !== 1 || !COMMIT.test(prepared.distributionCommit ?? '') || !COMMIT.test(prepared.tree ?? ''))
     fail('Invalid prepared distribution');
-  const expected = expectedDistribution(sourceRepository,shellRepository,prepared.sourceCommit,prepared.version);
-  if (prepared.sourceTag !== `v${prepared.version}` || prepared.distributionRef !== expected.distributionRef
+  const kind=prepared.distributionRef===`refs/tags/hooks-v${prepared.version}`?'hooks':'assistant';
+  const expected = expectedDistribution(sourceRepository,shellRepository,prepared.sourceCommit,prepared.version,kind);
+  if (prepared.sourceTag !== expected.sourceTag || prepared.distributionRef !== expected.distributionRef
     || prepared.sharedShellRevision !== expected.lock.revision || prepared.integritySha256 !== sha256(expected.files.get('package-integrity.json').bytes)
     || gitScalar(sourceRepository,['rev-parse',`${prepared.distributionCommit}^{tree}`]) !== prepared.tree
     || writeDistributionTree(sourceRepository,expected.files) !== prepared.tree
     // Also pin orphan parents, metadata and public provenance. Matching files
     // alone must not publish a caller-supplied commit/history under this name.
-    || writeDistributionCommit(sourceRepository,prepared) !== prepared.distributionCommit) fail('Prepared distribution no longer matches its exact source');
+    || writeDistributionCommit(sourceRepository,prepared,kind) !== prepared.distributionCommit) fail('Prepared distribution no longer matches its exact source');
   const observe = () => {
     const result = runGit(sourceRepository,['ls-remote','--refs','origin',prepared.distributionRef]);
     if (result.error || result.status !== 0 || result.stderr.length) fail('Cannot read distribution ref; do not repeat publication');
@@ -308,6 +369,66 @@ export async function publishPluginDistribution({ sourceRepository = ROOT, shell
   catch { /* An exception is uncertain, not permission for another push. */ }
   if (observe() !== prepared.distributionCommit) fail('Distribution publication uncertain; read back the exact ref before another decision');
   return {...prepared,published:true,alreadyPublished:false};
+}
+
+const HOOK_RELEASE_LOCK='hook-component.lock.json';
+const distributionKeys=['schemaVersion','version','sourceCommit','sourceTag','distributionRef','distributionCommit','tree','sharedShellRevision','integritySha256'];
+function readHookReleaseLock(repository, sourceCommit) {
+  const entry=gitScalar(repository,['ls-tree',sourceCommit,'--',HOOK_RELEASE_LOCK]);
+  if(!entry)return null;
+  if(!/^100644 blob [a-f0-9]{40}\thook-component\.lock\.json$/u.test(entry))fail('Unsafe hook release lock');
+  const lock=JSON.parse(gitBytes(repository,['show',`${sourceCommit}:${HOOK_RELEASE_LOCK}`]));
+  if(!lock||Object.keys(lock).sort().join(',')!==[...distributionKeys].sort().join(',')||lock.schemaVersion!==1
+    ||![lock.sourceCommit,lock.distributionCommit,lock.tree,lock.sharedShellRevision].every(value=>COMMIT.test(value??''))
+    ||!/^v\d+\.\d+\.\d+$/u.test(lock.sourceTag??'')||!VERSION.test(lock.version??'')
+    ||lock.distributionRef!==`refs/tags/hooks-v${lock.version}`||!/^[a-f0-9]{64}$/u.test(lock.integritySha256??''))
+    fail('Invalid hook release lock');
+  return lock;
+}
+
+/** A later MAIN release must retain the original hook release provenance,
+ * not mint a new companion commit merely because the main source SHA changed.
+ * The whole hook tree (including its inventory) must remain byte-identical.
+ * A real hook/shell update removes the old lock and publishes a NEW immutable
+ * component version through the same exact source gate and native publisher. */
+export async function prepareHookDependency({sourceRepository=ROOT,shellRepository,outputDirectory,sourceCommit}) {
+  const version=JSON.parse(gitBytes(sourceRepository,['show',`${sourceCommit}:plugins/${HOOK_PLUGIN_NAME}/plugin.json`])).version;
+  const candidate=await preparePluginDistribution({sourceRepository,shellRepository,outputDirectory,sourceCommit,version,kind:'hooks'});
+  const lock=readHookReleaseLock(sourceRepository,sourceCommit);
+  if(!lock)return {mode:'publish',prepared:candidate};
+  verifyLockedHookDependency({sourceRepository,shellRepository,sourceCommit,prepared:lock});
+  return {mode:'retained',prepared:lock};
+}
+
+function verifyLockedHookDependency({sourceRepository,shellRepository,sourceCommit,prepared}) {
+  const lock=readHookReleaseLock(sourceRepository,sourceCommit);
+  if(!lock||distributionKeys.some(key=>lock[key]!==prepared?.[key]))fail('Hook release provenance differs from its tracked lock');
+  gitBytes(sourceRepository,['merge-base','--is-ancestor',lock.sourceCommit,sourceCommit]);
+  if(gitScalar(sourceRepository,['rev-parse',`${lock.sourceTag}^{commit}`])!==lock.sourceCommit)
+    fail('Hook source tag differs from its locked source');
+  const expected=expectedDistribution(sourceRepository,shellRepository,sourceCommit,lock.version,'hooks');
+  if(writeDistributionTree(sourceRepository,expected.files)!==lock.tree
+    ||sha256(expected.files.get('package-integrity.json').bytes)!==lock.integritySha256
+    ||expected.lock.revision!==lock.sharedShellRevision
+    ||writeDistributionCommit(sourceRepository,lock,'hooks')!==lock.distributionCommit
+    ||gitScalar(sourceRepository,['rev-parse',`${lock.distributionCommit}^{tree}`])!==lock.tree)
+    fail('Stable hook bytes changed; publish a new hook component requiring native review');
+}
+
+export async function publishHookDependency({sourceRepository=ROOT,shellRepository,sourceCommit,dependency,runGit=runDistributionGit}) {
+  if(!dependency||Object.keys(dependency).sort().join(',')!=='mode,prepared')fail('Invalid hook dependency release');
+  if(dependency.mode==='publish'){
+    if(readHookReleaseLock(sourceRepository,sourceCommit)!==null||dependency.prepared?.sourceCommit!==sourceCommit)
+      fail('A locked hook component cannot be republished by a main release');
+    return publishPluginDistribution({sourceRepository,shellRepository,prepared:dependency.prepared,runGit});
+  }
+  if(dependency.mode!=='retained')fail('Invalid hook dependency release mode');
+  verifyLockedHookDependency({sourceRepository,shellRepository,sourceCommit,prepared:dependency.prepared});
+  const result=runGit(sourceRepository,['ls-remote','--refs','origin',dependency.prepared.distributionRef]);
+  if(result.error||result.status!==0||result.stderr.length
+    ||result.stdout.toString().trim()!==`${dependency.prepared.distributionCommit}\t${dependency.prepared.distributionRef}`)
+    fail('Locked hook distribution remote read-back failed');
+  return {...dependency.prepared,published:true,alreadyPublished:true};
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

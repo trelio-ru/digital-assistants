@@ -24,6 +24,15 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Pinned public Codex extraction failed' }
     Move-Item -LiteralPath (Join-Path $fixtureRoot $inputFile.Name) -Destination (Join-Path $fixtureRoot $inputFile.Target)
   }
+  # Main and hook components may retain different exact revisions of the SAME
+  # public shell. Fetch only a missing pinned commit, never a floating branch.
+  $hookLock = Get-Content (Join-Path $PSScriptRoot '..\..\hook-shell.lock.json') -Raw | ConvertFrom-Json
+  if ($hookLock.repository -ne 'https://github.com/trelio-ru/agent-workspaces.git' -or $hookLock.revision -notmatch '^[a-f0-9]{40}$') { throw 'Invalid hook shell pin' }
+  & git -C $env:TRELIO_TEST_SHARED_SHELL cat-file -e ($hookLock.revision + '^{commit}') 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    & git -C $env:TRELIO_TEST_SHARED_SHELL fetch --depth=1 origin $hookLock.revision
+    if ($LASTEXITCODE -ne 0) { throw 'Exact hook shell fetch failed' }
+  }
   $env:TRELIO_TEST_CODEX_CLI = Join-Path $fixtureRoot 'codex.exe'
   node --test (Join-Path $PSScriptRoot '..\..\tests\native-hook-discovery.test.mjs')
   if ($LASTEXITCODE -ne 0) { throw "Windows Codex hook discovery fixture failed with exit $LASTEXITCODE" }

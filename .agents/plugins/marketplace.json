@@ -9,7 +9,20 @@
       "source": {
         "source": "url",
         "url": "https://github.com/trelio-ru/digital-assistants.git",
-        "ref": "plugin-v0.1.4"
+        "ref": "plugin-v0.1.5"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "trelio-digital-assistant-hooks",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/trelio-ru/digital-assistants.git",
+        "ref": "hooks-v0.1.0"
       },
       "policy": {
         "installation": "AVAILABLE",

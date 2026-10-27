@@ -28,7 +28,10 @@ revision, одинаковая проверка подписи/Node/upgrade ис
 
 ## Пакет и проверки
 
-Source manifest/MCP/hooks и две skills лежат в `plugins/trelio-digital-assistant`.
+MCP/skills лежат в `plugins/trelio-digital-assistant`; определения hooks – только
+в `plugins/trelio-digital-assistant-hooks`. Codex хэширует весь hook bundle, поэтому
+его manifest/shell/inventory заморожены независимо от main instructions/version.
+Нельзя переносить approvals, писать trust hashes или обходить native review.
 Список payload ограничен builder; новый файл требует осознанного включения.
 Иконки в `assets/` сохраняют знак человеческого плагина с добавленным курсором;
 manifest paths и payload inventory меняются согласованно, без правки shared shell.
@@ -60,8 +63,15 @@ Task reference keeps nonexclusive conversation correlation and exact per-origina
 corporate Secret creation through the SAME host/owner ledger, not new executors.
 First-send hints never permit send replay or replace a native route receipt.
 Marketplace main ссылается только на self-contained generated `plugin-vX.Y.Z`,
-не на неполную source-папку. Релиз 0.1.4 доставляет per-original routing reference
-при неизменных hooks и shared shell pin. Source tag `vX.Y.Z` после exact 3-OS CI использует
+не на неполную source-папку. С 0.1.5 main bundle не владеет hooks. `hooks-vX.Y.Z`
+публикуется тем же native builder и фиксируется `hook-component.lock.json`;
+следующий main release проверяет исходные bytes/provenance без новой публикации.
+Hook version/pin меняются только вместе с реальным hook/loader изменением.
+`hook-shell.lock.json` независим от main `shared-shell.lock.json`; release impact
+общей оболочки проверяется для обоих, metadata-only pin bump hooks запрещён.
+Первый переход требует личного одобрения нового компонента; будущие main-only
+обновления сохраняют native hashes. Проверять реальным isolated hooks/list: main
+update – прежние hashes, hook/loader change – новые, без fixture trust writes. Source tag `vX.Y.Z` после exact 3-OS CI использует
 тот же builder/pin и существующий workflow; generated ref не запускает новый
 release. Native Git создаёт immutable ref один раз и делает exact read-back;
 mismatch/unknown не разрешают force/replay. Порядок – `docs/architecture.md`.

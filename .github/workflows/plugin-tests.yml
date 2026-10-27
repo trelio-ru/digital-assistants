@@ -109,6 +109,9 @@ jobs:
           const lock=JSON.parse(fs.readFileSync('shared-shell.lock.json','utf8'));
           if(lock.repository!=='https://github.com/trelio-ru/agent-workspaces.git'||!/^[a-f0-9]{40}$/.test(lock.revision))throw Error('Invalid shell pin');
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`revision=${lock.revision}\n`);
+          const hooks=JSON.parse(fs.readFileSync('hook-shell.lock.json','utf8'));
+          if(hooks.repository!==lock.repository||!/^[a-f0-9]{40}$/.test(hooks.revision))throw Error('Invalid hook shell pin');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`hook-revision=${hooks.revision}\n`);
           NODE
       - uses: actions/checkout@v4
         with:
@@ -116,6 +119,13 @@ jobs:
           ref: ${{ steps.shell.outputs.revision }}
           path: _shared-shell
           persist-credentials: false
+      - name: Materialize the independent exact hook shell pin
+        env:
+          HOOK_REVISION: ${{ steps.shell.outputs.hook-revision }}
+        run: |
+          if ! git -C _shared-shell cat-file -e "${HOOK_REVISION}^{commit}" 2>/dev/null; then
+            git -C _shared-shell fetch --depth=1 origin "$HOOK_REVISION"
+          fi
       - name: Build exact installable source with the existing builder
         env:
           SOURCE_GATE_RUN_ID: ${{ needs.verified-source.outputs.run-id }}
@@ -123,10 +133,12 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs/promises';
           import path from 'node:path';
-          import {preparePluginDistribution} from './scripts/build-plugin.mjs';
+          import {preparePluginDistribution,prepareHookDependency} from './scripts/build-plugin.mjs';
           const prepared=await preparePluginDistribution({sourceRepository:process.cwd(),shellRepository:path.resolve('_shared-shell'),
             outputDirectory:path.join(process.env.RUNNER_TEMP,'plugin'),sourceCommit:process.env.GITHUB_SHA,version:process.env.GITHUB_REF_NAME.slice(1)});
           await fs.writeFile(path.join(process.env.RUNNER_TEMP,'distribution.json'),JSON.stringify(prepared,null,2)+'\n');
+          const hookDependency=await prepareHookDependency({sourceRepository:process.cwd(),shellRepository:path.resolve('_shared-shell'),outputDirectory:path.join(process.env.RUNNER_TEMP,'hook-plugin'),sourceCommit:process.env.GITHUB_SHA});
+          await fs.writeFile(path.join(process.env.RUNNER_TEMP,'hook-distribution.json'),JSON.stringify(hookDependency,null,2)+'\n');
           await fs.writeFile(path.join(process.env.RUNNER_TEMP,'source-gate.json'),JSON.stringify({sourceCommit:prepared.sourceCommit,runId:process.env.SOURCE_GATE_RUN_ID})+'\n');
           NODE
       - name: Retain exact package bytes and structural provenance
@@ -136,6 +148,8 @@ jobs:
           name: trelio-digital-assistant-${{ github.ref_name }}
           path: |
             ${{ runner.temp }}/plugin/
+            ${{ runner.temp }}/hook-plugin/
+            ${{ runner.temp }}/hook-distribution.json
             ${{ runner.temp }}/distribution.json
             ${{ runner.temp }}/source-gate.json
           if-no-files-found: error
@@ -150,9 +164,11 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs/promises';
           import path from 'node:path';
-          import {publishPluginDistribution} from './scripts/build-plugin.mjs';
+          import {publishPluginDistribution,publishHookDependency} from './scripts/build-plugin.mjs';
           const prepared=JSON.parse(await fs.readFile(path.join(process.env.RUNNER_TEMP,'distribution.json'),'utf8'));
+          const dependency=JSON.parse(await fs.readFile(path.join(process.env.RUNNER_TEMP,'hook-distribution.json'),'utf8'));
+          const hooks=await publishHookDependency({sourceRepository:process.cwd(),shellRepository:path.resolve('_shared-shell'),sourceCommit:process.env.GITHUB_SHA,dependency});
           const result=await publishPluginDistribution({sourceRepository:process.cwd(),shellRepository:path.resolve('_shared-shell'),prepared});
-          await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,JSON.stringify({...result,artifactId:process.env.RELEASE_ARTIFACT_ID,
+          await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,JSON.stringify({...result,hooks,artifactId:process.env.RELEASE_ARTIFACT_ID,
             artifactDigest:process.env.RELEASE_ARTIFACT_DIGEST},null,2)+'\n');
           NODE
