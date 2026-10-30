@@ -1,10 +1,11 @@
 name: Plugin package
 on:
   push:
-    branches: [main, 'codex/**']
     # Installable plugin-v* refs are generated output, never another release
     # trigger. Only the separately reviewed source tag enters publication.
     tags: ['v*']
+  # The FIFO verifies this exact PR head before protected fast-forward main.
+  # Do not repeat the same gate on that main push.
   pull_request:
 permissions:
   contents: read

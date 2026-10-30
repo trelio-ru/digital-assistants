@@ -22,3 +22,7 @@ state; boolean, raw push и старый wrapper допуска не дают.
 Репозиторий владеет своими policy, CI adapter, hooks и transport. Общий код не
 копируется, пакет не включается в plugin/runtime/provider artifacts и не меняет
 их version/minimum policy. Обновление infrastructure не означает выпуск продукта.
+
+Обычный FF main использует exact PR evidence и не запускает тот же gate заново.
+Канонический pre-push продолжает проверять каждый protected push. Tag jobs
+сохраняют собственные прежние release-проверки и publication/read-back.
