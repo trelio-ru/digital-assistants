@@ -19,7 +19,7 @@ revision, одинаковая проверка подписи/Node/upgrade ис
   общий runtime, Secret engine, company rules и native domain services.
 - `main` после начального bootstrap остаётся clean. До правки fetch/status и
   divergence check; task worktree создаётся `npm run git:new-worktree -- codex/...`.
-  Commit по-русски, targeted/full CI перед `npm run git:push-main`, затем exact
+  Commit по-русски, targeted checks, затем FIFO `npm run git:integrate` с final hosted CI и exact
   remote read-back и `npm run git:finish-worktree -- <absolute-path>` из main.
   Raw/force main push после bootstrap запрещён. Не изменять чужие worktrees.
 - Никаких product tags, marketplace publication, установки/включения или изменения
@@ -91,3 +91,12 @@ output – новая папка, существующая не перезапи
 Перед интеграцией: `npm run check:dependencies`, `npm test`, validation обеих skills
 и две byte-identical сборки с pinned настоящим shell. До готовности assistant
 entry/backend не устанавливать и не объявлять unattended flow работающим.
+
+## Координация Git и релизных версий
+
+После commit – `npm run git:integrate`: FIFO до fresh fetch/rebase и final CI,
+затем exact guarded push/read-back. Прямой `git:push-main` больше не является
+самостоятельным workflow. Разрешённый релиз резервирует exact tag до CI через
+`npm run git:integrate -- --tag <tag>`. Старые wrappers/boolean не дают admission.
+После checkout установить pinned maintainer dependency через `npm ci --ignore-scripts`.
+Контракт, recovery и границы общего кода – [git-coordination](docs/git-coordination.md).

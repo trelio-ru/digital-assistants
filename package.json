@@ -6,7 +6,7 @@
   },
   "scripts": {
     "build": "node scripts/build-plugin.mjs",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/*.test.mjs && npm run test:git-coordination",
     "worktree:bootstrap": "bash scripts/bootstrap-worktree-dependencies.sh",
     "check:dependencies": "bash scripts/bootstrap-worktree-dependencies.sh --check",
     "check:worktree": "bash scripts/assert-clean-worktree.sh",
@@ -14,9 +14,12 @@
     "git:new-worktree": "bash scripts/create-task-worktree.sh",
     "git:finish-worktree": "node scripts/git-finish-worktree.mjs",
     "git:check-finished-worktrees": "node scripts/git-finish-worktree.mjs --check",
-    "git:push-main": "bash scripts/push-main.sh"
+    "git:push-main": "bash scripts/push-main.sh",
+    "git:integrate": "node scripts/git-integrate.mjs",
+    "test:git-coordination": "node --test scripts/git-coordination.test.mjs"
   },
   "devDependencies": {
-    "tiktoken": "1.0.22"
+    "tiktoken": "1.0.22",
+    "@trelio/git-coordinator": "git+https://github.com/trelio-ru/agent-workspaces-runtime.git#5543d2c2d3aa038543c61546008401276a62c09e"
   }
 }
