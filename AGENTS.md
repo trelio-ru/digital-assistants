@@ -47,7 +47,10 @@ Builder генерирует совместимый `.codex-plugin/plugin.json`,
 из единственного source manifest/MCP; root `plugin.json`/`mcp.json` в artifact
 не остаются. Source portable cwd `${PLUGIN_ROOT}` проверяется до перевода в
 native inline cwd `.`. Hook/shell bytes неизменны; discovery не одобряет trust.
-Native Windows CLI gate устанавливает только isolated fixture package, читает
+Native Windows CLI gate проверяет полный pinned Git marketplace remove/add →
+сохранённый enabled main → однократную установку новой immutable версии;
+неудачный кандидат не переигрывается и hook-компонент не меняется. Он
+устанавливает только isolated fixture package, читает
 `hooks/list` и требует ровно три untrusted hooks, без аккаунта/model/Trelio MCP.
 Windows command resolution принадлежит общему Codex resolver/PATHEXT; shell
 не форкать и OS executor в plugin не добавлять.

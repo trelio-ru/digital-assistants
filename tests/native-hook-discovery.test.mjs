@@ -3,15 +3,16 @@ import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {spawn,spawnSync} from 'node:child_process';
-import {pathToFileURL} from 'node:url';
+import {spawn,spawnSync,execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {serveNativeGitFixture} from './native-git-fixture.mjs';
 import {buildHookPlugin} from '../scripts/build-plugin.mjs';
 
 
 // Explicit native executable + exact read-only shared shell checkout. Never
 // discover installed profiles, use an account/model, trust a hook, or import
 // user configuration. CI pins the official executable independently below.
-test('native Codex keeps hook hashes across main updates and detects executable hook changes',{
+test('native pinned Git source update preserves enabled main and hook hashes and detects executable changes',{
   skip:!process.env.TRELIO_TEST_CODEX_CLI||!process.env.TRELIO_TEST_SHARED_SHELL,
 },async t=>{
   // Hosted Windows TEMP may use RUNNER~1 while native Codex returns its long
@@ -21,9 +22,9 @@ test('native Codex keeps hook hashes across main updates and detects executable 
   // Windows may retain a just-closed native SQLite/directory handle briefly
   // after process exit. Retry only removal of this owned fixture, with a fixed
   // bound; discovery, installation and native requests are never repeated.
-  t.after(()=>fs.rm(root,{recursive:true,force:true,maxRetries:20,retryDelay:100}));
-  const market=path.join(root,'market'),home=path.join(root,'home');
-  await fs.mkdir(path.join(market,'.agents/plugins'),{recursive:true});await fs.mkdir(home);
+  let transport;
+  t.after(async()=>{await transport?.close();await fs.rm(root,{recursive:true,force:true,maxRetries:20,retryDelay:100});});
+  const home=path.join(root,'home');await fs.mkdir(home);
   // Use the SAME real Git repository for main URL refs and the fixed hook
   // subdirectory ref. Local-source fixtures miss Codex's checkout-index writes
   // during main installation and falsely certify stable native fingerprints.
@@ -51,20 +52,29 @@ test('native Codex keeps hook hashes across main updates and detects executable 
   await fs.writeFile(mainManifest,JSON.stringify({name:'trelio-digital-assistant',version:'0.1.1'}));
   await fs.appendFile(path.join(repository,'README.md'),'Synthetic changed main instructions\n');
   commit('Second main only');git(['tag','main-two']);
+  transport=await serveNativeGitFixture({root,environment:env});
   const catalogue={name:'assistant-discovery-fixture',plugins:[
-    {name:'trelio-digital-assistant',source:{source:'url',url:pathToFileURL(repository).href,ref:'main-one'}},
-    {name:'trelio-digital-assistant-hooks',source:{source:'git-subdir',url:pathToFileURL(repository).href,path:'./plugin',ref:'fixed-hooks'}}]};
-  const catalogueFile=path.join(market,'.agents/plugins/marketplace.json');
-  await fs.writeFile(catalogueFile,JSON.stringify(catalogue));
+    {name:'trelio-digital-assistant',source:{source:'url',url:transport.url,ref:'main-one'}},
+    {name:'trelio-digital-assistant-hooks',source:{source:'git-subdir',url:transport.url,path:'./plugin',ref:'fixed-hooks'}}]};
+  // Source pinning is a separate native transition from the immutable plugin
+  // ref. Both marketplace tags use the SAME hook ref, exactly as production.
+  const catalogueFile=path.join(repository,'.agents/plugins/marketplace.json');
+  await fs.mkdir(path.dirname(catalogueFile),{recursive:true});
+  await fs.writeFile(catalogueFile,JSON.stringify(catalogue));commit('First pinned marketplace');git(['tag','market-one']);
+  catalogue.plugins[0].source.ref='main-two';
+  await fs.writeFile(catalogueFile,JSON.stringify(catalogue));commit('Next pinned marketplace');git(['tag','market-two']);
+  git(['clone','--bare',repository,path.join(root,'repository.git')]);
   const exe=process.env.TRELIO_TEST_CODEX_CLI;
-  const native=args=>{
-    const result=spawnSync(exe,args,{env,cwd:home,timeout:30_000,maxBuffer:1024*1024,windowsHide:true});
-    assert.equal(result.error,undefined,'native fixture setup failed');assert.equal(result.status,0,'native fixture setup refused');
+  const native=async args=>{
+    // Asynchronous execution lets the owned Git HTTP backend serve this SAME
+    // command. No account/model/MCP invocation or native GUI is involved.
+    let result;try{result=await promisify(execFile)(exe,args,{env,cwd:home,shell:false,timeout:30_000,maxBuffer:1024*1024,windowsHide:true});}
+    catch{assert.fail('native fixture setup refused');}
     return JSON.parse(result.stdout.toString());
   };
-  native(['plugin','marketplace','add',market,'--json']);
+  await native(['plugin','marketplace','add',transport.url,'--ref','market-one','--json']);
   const install=name=>native(['plugin','add',`${name}@assistant-discovery-fixture`,'--json']);
-  const installedHooks=install('trelio-digital-assistant-hooks');
+  const installedHooks=await install('trelio-digital-assistant-hooks');
   const component=JSON.parse(await fs.readFile(path.join(repository,'plugin','.codex-plugin/plugin.json'),'utf8'));
   assert.equal(path.resolve(installedHooks.installedPath),path.join(home,'plugins','cache','assistant-discovery-fixture','trelio-digital-assistant-hooks',component.version),
     'native git-subdir must preserve the exact versioned installation layout');
@@ -99,10 +109,17 @@ test('native Codex keeps hook hashes across main updates and detects executable 
   }finally{clearTimeout(timer);child.kill();await closed;}
   };
   const original=await readHooks();
-  install('trelio-digital-assistant');
+  await install('trelio-digital-assistant');
   assert.deepEqual(await readHooks(),original,'installing main from the SAME Git URL cannot alter hook hashes');
-  catalogue.plugins[0].source.ref='main-two';await fs.writeFile(catalogueFile,JSON.stringify(catalogue));
-  install('trelio-digital-assistant');
+  await native(['plugin','marketplace','remove','assistant-discovery-fixture','--json']);
+  await native(['plugin','marketplace','add',transport.url,'--ref','market-two','--json']);
+  const beforeAdd=await native(['plugin','list','--marketplace','assistant-discovery-fixture','--json']);
+  const retainedMain=beforeAdd.installed.filter(row=>row.pluginId==='trelio-digital-assistant@assistant-discovery-fixture');
+  assert.equal(retainedMain.length,1);assert.equal(retainedMain[0].installed,true);assert.equal(retainedMain[0].enabled,true);
+  assert.equal(retainedMain[0].version,'0.1.0','source replacement retains the old enabled main until ONE native new installation');
+  const updatedMain=await install('trelio-digital-assistant');assert.equal(updatedMain.version,'0.1.1');
+  const pinnedConfig=await fs.readFile(path.join(home,'config.toml'),'utf8');
+  assert.match(pinnedConfig,/ref = "market-two"/u,'native source must remain pinned after installing the new main');
   assert.deepEqual(await readHooks(),original,'updating main version/ref/instructions must NOT change native hook trust hashes');
   await assert.rejects(fs.lstat(path.join(installedHooks.installedPath,'.git')),{code:'ENOENT'});
   // Mutate ONLY the isolated installed fixture. No trust record is written:

@@ -51,6 +51,11 @@ inventory не остаётся. Ни второй MCP server, ни новый e
 Native Windows gate использует официальный `rust-v0.164.0` и pinned hashes,
 изолированные HOME/USERPROFILE/CODEX_HOME и synthetic Git fixture marketplace. Он
 проверяет три `untrusted` hooks без входа, model turn, Trelio MCP или trust writes.
+Native fixture использует loopback Git HTTP и два pinned marketplace refs:
+штатные remove/add сохраняют enabled старого main, затем один `plugin add`
+устанавливает следующий immutable main. Одного изменения local marketplace
+JSON недостаточно для проверки этого production-перехода. Git backend
+read-only, все children/HTTP закрываются до удаления disposable HOME.
 Main version/instruction update обязан сохранять реальные `currentHash`; изменение
 hook или loader bytes обязано менять их. Запись trusted_hash/approval migration
 и обход trust агентом запрещены.
@@ -152,17 +157,18 @@ Source → очередь → тот же native chat → business receipt → �
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.11`. В этом ref
+Git source `url` этого же repository с immutable ref `plugin-v0.1.12`. В этом ref
 native `.codex-plugin/plugin.json` находится рядом с готовыми skills/MCP и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.11` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.12` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
-После exact successful source package gate на Linux/macOS/Windows оператор
-создаёт source tag `v0.1.11` и отправляет его guarded
-`npm run git:push-main -- --tag v0.1.11`. Штатный `plugin-tests.yml` для tag:
+Для нового выпуска оператор резервирует source tag `v0.1.12` до CI через
+`npm run git:integrate -- --tag v0.1.12`. FIFO допускает publication только после
+exact successful source package gates на Linux/macOS/Windows. Штатный
+`plugin-tests.yml` для tag:
 
 1. Проверяет stable tag, достижимость source SHA из main и successful three-OS
    package jobs этого exact SHA. Source/codex/PR gates не повторяются на tag.
@@ -177,12 +183,12 @@ Generated `.gitattributes` сохраняет exact payload bytes также п�
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
 4. Сначала публикует или проверяет exact hook dependency, затем создаёт
-   `refs/tags/plugin-v0.1.11` одним native push и перечитывает
+   `refs/tags/plugin-v0.1.12` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.11` commit,
+После workflow read-back обязан подтвердить remote `plugin-v0.1.12` commit,
 `.codex-plugin/plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
 launchers в clone этого ref, а также отдельный immutable hook ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
@@ -191,7 +197,7 @@ launchers в clone этого ref, а также отдельный immutable ho
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.11`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.12`; signed runtime `3.18.0` выпускается независимо в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
@@ -203,6 +209,12 @@ intent before one request; the receipt admits an attempt, not delivery or replay
 Encrypted declarations/arguments stay in the native-selected common payload flow.
 PAT/OAuth enrollment needs a human in the existing protected local UI. These
 runtime/DB/crypto checks do not assert Windows pilot or business readiness.
+
+Main-only patch 0.1.12 предоставляет новый допустимый кандидат после
+положительно завершённого отката старой неудачной версии. Runtime сохраняет
+её failed-version latch: выпуск не повторяет старый installation intent,
+не снимает native trust и не поднимает minimum. Реальная установка/активация
+на устройстве проверяется отдельно после immutable distribution read-back.
 
 ## Независимый hook-компонент
 
