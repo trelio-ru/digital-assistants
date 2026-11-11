@@ -157,16 +157,16 @@ Source → очередь → тот же native chat → business receipt → �
 ## Marketplace release
 
 Marketplace `.agents/plugins/marketplace.json` на main ссылается на поддерживаемый
-Git source `url` этого же repository с immutable ref `plugin-v0.1.12`. В этом ref
+Git source `url` этого же repository с immutable ref `plugin-v0.1.13`. В этом ref
 native `.codex-plugin/plugin.json` находится рядом с готовыми skills/MCP и семью
 неизменёнными shell файлами. Это generated installable tree, а не editable fork
-shell. Source tag `v0.1.12` остаётся на проверенном source commit в main.
+shell. Source tag `v0.1.13` остаётся на проверенном source commit в main.
 ZIP/artifact URL не используется как новый marketplace source.
 Generated `.gitattributes` сохраняет exact payload bytes также при Windows
 `core.autocrlf=true`; hashes не пересчитываются после локального преобразования.
 
-Для нового выпуска оператор резервирует source tag `v0.1.12` до CI через
-`npm run git:integrate -- --tag v0.1.12`. FIFO допускает publication только после
+Для нового выпуска оператор резервирует source tag `v0.1.13` до CI через
+`npm run git:integrate -- --tag v0.1.13`. FIFO допускает publication только после
 exact successful source package gates на Linux/macOS/Windows. Штатный
 `plugin-tests.yml` для tag:
 
@@ -183,12 +183,12 @@ exact successful source package gates на Linux/macOS/Windows. Штатный
    связывает каждый payload file/mode/size/SHA. Artifact ID/digest входят в
    workflow summary вместе с exact source и Git ref.
 4. Сначала публикует или проверяет exact hook dependency, затем создаёт
-   `refs/tags/plugin-v0.1.12` одним native push и перечитывает
+   `refs/tags/plugin-v0.1.13` одним native push и перечитывает
    exact remote commit. Existing equal ref означает уже опубликованный результат;
    mismatch не перезаписывается. Lost reply разрешает только read-back, без
    автоматического force/replay. Generated tag исключён из release triggers.
 
-После workflow read-back обязан подтвердить remote `plugin-v0.1.12` commit,
+После workflow read-back обязан подтвердить remote `plugin-v0.1.13` commit,
 `.codex-plugin/plugin.json` version, весь `package-integrity.json` и наличие declared MCP/hook
 launchers в clone этого ref, а также отдельный immutable hook ref. Marketplace refresh должен разрешить ту же запись;
 до этого нельзя объявлять distribution доступной. Следующая plugin version
@@ -197,7 +197,7 @@ launchers в clone этого ref, а также отдельный immutable ho
 Официальный source contract – [OpenAI marketplace metadata](https://developers.openai.com/plugins/build/plugins#marketplace-metadata).
 Публикация не устанавливает plugin, не выполняет enrollment/login/Hook trust и не
 поднимает runtime/plugin minimum. Shared shell component остаётся `3.2.3`, plugin
-version – `0.1.12`; signed runtime `3.18.0` выпускается независимо в общем контуре.
+version – `0.1.13`. Подписанный runtime выпускается отдельно в общем контуре.
 
 
 Remote MCP reuses the common resolver/protected setup/vault/doctor/call engine
@@ -215,6 +215,11 @@ Main-only patch 0.1.12 предоставляет новый допустимы�
 её failed-version latch: выпуск не повторяет старый installation intent,
 не снимает native trust и не поднимает minimum. Реальная установка/активация
 на устройстве проверяется отдельно после immutable distribution read-back.
+
+Main-only patch 0.1.13 даёт штатному updater следующий допустимый кандидат
+после завершённого отката 0.1.12. Патч восстановления загрузчика выпускается
+отдельно в подписанном runtime. Публикация main сохраняет exact shell и
+hook-компонент 0.1.1, не сбрасывает failed-version latch и не меняет minimum.
 
 ## Независимый hook-компонент
 

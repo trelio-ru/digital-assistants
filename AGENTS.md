@@ -49,7 +49,9 @@ Builder генерирует совместимый `.codex-plugin/plugin.json`,
 native inline cwd `.`. Hook/shell bytes неизменны; discovery не одобряет trust.
 Native Windows CLI gate проверяет полный pinned Git marketplace remove/add →
 сохранённый enabled main → однократную установку новой immutable версии;
-неудачный кандидат не переигрывается и hook-компонент не меняется. Он
+неудачный кандидат не переигрывается и hook-компонент не меняется. Main
+0.1.13 допускается после завершённого отката 0.1.12 штатным подписанным
+рантаймом; нативная активация проверяется отдельно от публикации. Windows gate
 устанавливает только isolated fixture package, читает
 `hooks/list` и требует ровно три untrusted hooks, без аккаунта/model/Trelio MCP.
 Windows command resolution принадлежит общему Codex resolver/PATHEXT; shell
