@@ -99,12 +99,18 @@ entry/backend не устанавливать и не объявлять unatten
 
 ## Координация Git и релизных версий
 
-После commit – `npm run git:integrate`: FIFO до fresh fetch/rebase и final CI,
-затем exact guarded push/read-back. Прямой `git:push-main` больше не является
-самостоятельным workflow. Разрешённый релиз резервирует exact tag до CI через
+После commit – `npm run git:integrate`: очередь до fresh fetch/rebase, final CI
+и guarded push/read-back. Вливания идут FIFO перед ожидающим релизом.
+`releaseRole=observer` читает результат исходного тикета. `git:push-main` служит
+внутренним transport. Разрешённый релиз резервирует exact tag до CI через
 `npm run git:integrate -- --tag <tag>`. Старые wrappers/boolean не дают admission.
 После checkout установить pinned maintainer dependency через `npm ci --ignore-scripts`.
 Контракт, recovery и границы общего кода – [git-coordination](docs/git-coordination.md).
-Долгое ожидание очереди/CI – `git:integrate -- --background` и один 15-минутный
-heartbeat этого же чата по этому контракту. Без подтверждённого admission и
-сохранённой автоматизации нельзя обещать автоматическое продолжение.
+В macOS Codex обычная задача использует `git:integrate -- --finish-worktree`.
+До worker общий maintainer service сохраняет chatFollowUp исходного чата. После
+подтверждённого admission и сопровождения заверши ход; terminal result придёт
+в native-очередь. Exact status/remote read-back и --ack получения обязательны,
+callback не даёт нового push/release authority. Один чат может сопровождать
+несколько clone/ticket независимо. Model heartbeat не создаётся. Без native
+context автоматического возврата нет; release/explicit --wait синхронны.
+Git fixtures, проверяющие завершённый transport, используют явный `--wait`.

@@ -2,29 +2,27 @@
 
 ## Фоновое ожидание
 
-При ожидании очереди или CI использовать `npm run git:integrate -- --background`
-(для уже разрешённого релиза добавить `--tag <exact-tag>`). Worker сам продолжает
-FIFO; launcher возвращает JSON только после сохранённого admission. Повторный
-запуск той же живой задачи переиспользует ticket. Пустая очередь не доказывает
-успех: `npm run git:integrate -- --status <ticket>` читает активный ticket либо
-сохранённый terminal result с исходным/rebased SHA и private log path.
+В macOS Codex обычная задача использует
+`npm run git:integrate -- --finish-worktree`. После сохранённого ticket и
+`chatFollowUp` завершить ход. Воркер выполняет интеграцию и штатную уборку,
+а общий LaunchAgent передаёт terminal result в исходный чат через native
+`codex queue`. В callback проверить exact ticket и фактический `origin/main`,
+подтвердить получение через `--ack`. Повторный enqueue получает отдельное
+сопровождение. Без native context автоматического возврата нет. Для уже
+разрешённого релиза используется синхронный `--wait --tag <exact-tag>`.
 
-Агент сохраняет один heartbeat этого же чата раз в 15 минут, точный ticket,
-canonical/task paths и оставшиеся шаги. При активном ожидании он заканчивает
-проверку без уведомления; после success проверяет remote и выполняет штатный
-cleanup и остальные уже разрешённые действия. Ошибка/unknown сначала требуют
-проверки фактического результата, без blind retry и удаления чужих locks.
-После завершения heartbeat отключается; при необходимом решении человека –
-приостанавливается. Без подтверждённого scheduler нельзя обещать возврат.
-Подробный [общий flow](https://github.com/trelio-ru/agent-workspaces-runtime/blob/6cdbf5d2123711c7345ea1bda31ef0395b1d54d1/docs/git-coordination.md#background-integration-and-chat-follow-up)
-поставляется с той же exact maintainer revision. Компьютер и Codex desktop app
-должны оставаться включёнными; CI/transport и release authority не расширяются.
+Порядок восстановления и доставки описан в [общем закреплённом контракте](https://github.com/trelio-ru/agent-workspaces-runtime/blob/8952a72a176893254311d9b141f9870d03a39021/docs/git-coordination.md#background-integration-and-chat-follow-up).
 
 ## Инварианты интеграции
 
-После commit запустить `npm run git:integrate`. Общая FIFO всех linked worktree
-занимается до fresh fetch/rebase, публикации task branch/PR, финального exact
-hosted CI и guarded main push/read-back. Не менять ожидающие HEAD/files.
+После commit запустить `npm run git:integrate`. Очередь общая для linked
+worktree. Владелец держит место от fresh fetch/rebase до публикации task
+branch/PR, exact hosted CI и guarded main push/read-back. Не менять ожидающие
+HEAD/files.
+Обычные вливания идут FIFO перед ожидающим релизом. После захвата места
+новые вливания ждут за ним. Повтор с тем же тегом и исходным SHA может
+присоединиться к ожидающему тикету. `releaseRole=observer` и exit 3 сообщают
+результат интеграции, а публикацию продолжает исходный запуск.
 Для разрешённого релиза: `npm run git:integrate -- --tag <exact-tag>`.
 Версия проверяется до CI; занятая версия останавливает кандидата без перезаписи.
 Подготовить source/manifest version до enqueue. Артефакт, подпись, activation/CAS
